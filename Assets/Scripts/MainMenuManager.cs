@@ -1,7 +1,6 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 
 public class MainMenuManager : MonoBehaviour
@@ -9,161 +8,248 @@ public class MainMenuManager : MonoBehaviour
     [Header("Pantallas del Menú")]
     [SerializeField] private GameObject pressStartScreen;
     [SerializeField] private GameObject menuOptionsScreen;
+    [SerializeField] private GameObject panelOpciones;
 
-    [Header("Ajustes de la Animación")]
-    [SerializeField] private float fadeDuration = 0.6f;
-
-    [Header("Configuración de Escenas")]
-    [SerializeField] private string firstLevelSceneName = "Nivel1";
-
-    [Header("Botones")]
+    [Header("Botones Principales")]
     [SerializeField] private Button btnJugar;
     [SerializeField] private Button btnOpciones;
     [SerializeField] private Button btnCreditos;
     [SerializeField] private Button btnSalir;
 
-    [Header("Indicador Visual (Daga)")]
+    [Header("Navegación y Puntero")]
     [SerializeField] private RectTransform daggerPointer;
-    [SerializeField] private float daggerOffsetX = -180f;
+    [SerializeField] private Vector2 pointerOffset = new Vector2(-150f, 0f);
 
-    private bool hasStarted = false;
-    private GameObject lastSelectedObject;
+    [Header("Configuración de Escena")]
+    [SerializeField] private string gameSceneName = "Nivel1";
 
-    private CanvasGroup startCanvasGroup;
-    private CanvasGroup optionsCanvasGroup;
+    [Header("Ajustes de Audio (Opciones)")]
+    [SerializeField] private Slider sliderMusica;
+    [SerializeField] private Slider sliderSFX;
+    [SerializeField] private AudioSource musicAudioSource;
+    [SerializeField] private AudioSource sfxAudioSource;
+
+    private Button[] menuButtons;
+    private int currentSelectedIndex = 0;
+    private bool isInMenuButtons = false;
+    private bool isInSubPanel = false;
+
+    void Awake()
+    {
+        menuButtons = new Button[] { btnJugar, btnOpciones, btnCreditos, btnSalir };
+    }
 
     void Start()
     {
-        Time.timeScale = 1f;
-
-        // Configuración de CanvasGroups para la transición suave
-        if (pressStartScreen != null)
-        {
-            pressStartScreen.SetActive(true);
-            startCanvasGroup = pressStartScreen.GetComponent<CanvasGroup>();
-            if (startCanvasGroup == null)
-            {
-                startCanvasGroup = pressStartScreen.AddComponent<CanvasGroup>();
-            }
-            startCanvasGroup.alpha = 1f;
-        }
-
-        if (menuOptionsScreen != null)
-        {
-            menuOptionsScreen.SetActive(true);
-            optionsCanvasGroup = menuOptionsScreen.GetComponent<CanvasGroup>();
-            if (optionsCanvasGroup == null)
-            {
-                optionsCanvasGroup = menuOptionsScreen.AddComponent<CanvasGroup>();
-            }
-            optionsCanvasGroup.alpha = 0f;
-            optionsCanvasGroup.interactable = false;
-            optionsCanvasGroup.blocksRaycasts = false;
-        }
+        if (pressStartScreen != null) pressStartScreen.SetActive(true);
+        if (menuOptionsScreen != null) menuOptionsScreen.SetActive(false);
+        if (panelOpciones != null) panelOpciones.SetActive(false);
 
         if (daggerPointer != null)
         {
             daggerPointer.gameObject.SetActive(false);
         }
 
-        if (btnJugar != null) btnJugar.onClick.AddListener(PlayGame);
-        if (btnSalir != null) btnSalir.onClick.AddListener(QuitGame);
+        CargarPreferenciasAudio();
     }
 
     void Update()
     {
-        if (!hasStarted)
+        // 1. Pantalla de inicio
+        if (!isInMenuButtons && !isInSubPanel)
         {
-            if (Input.anyKeyDown)
+            if (Input.anyKeyDown || Input.GetMouseButtonDown(0))
             {
-                hasStarted = true;
-                StartCoroutine(TransitionToMenuRoutine());
+                EntrarAMenuPrincipal();
             }
             return;
         }
 
-        // Posicionar la daga junto al botón seleccionado
-        if (daggerPointer != null && EventSystem.current != null)
+        // 2. Navegación en el menú principal
+        if (isInMenuButtons && !isInSubPanel)
         {
-            GameObject currentSelected = EventSystem.current.currentSelectedGameObject;
-
-            if (currentSelected != null && currentSelected != lastSelectedObject)
+            // Movimiento hacia abajo
+            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
             {
-                if (currentSelected.GetComponent<Button>() != null)
+                CambiarSeleccion(1);
+            }
+            // Movimiento hacia arriba
+            else if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
+            {
+                CambiarSeleccion(-1);
+            }
+            // Confirmar selección
+            else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+            {
+                EjecutarBotonSeleccionado();
+            }
+
+            // Sincronizar si el usuario selecciona con el mouse o con la navegación interna de Unity
+            if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+            {
+                for (int i = 0; i < menuButtons.Length; i++)
                 {
-                    lastSelectedObject = currentSelected;
-                    RectTransform buttonRect = currentSelected.GetComponent<RectTransform>();
-
-                    daggerPointer.position = new Vector3(
-                        buttonRect.position.x + daggerOffsetX,
-                        buttonRect.position.y,
-                        buttonRect.position.z
-                    );
-
-                    if (!daggerPointer.gameObject.activeSelf)
+                    if (menuButtons[i] != null && EventSystem.current.currentSelectedGameObject == menuButtons[i].gameObject)
                     {
-                        daggerPointer.gameObject.SetActive(true);
+                        if (currentSelectedIndex != i)
+                        {
+                            currentSelectedIndex = i;
+                            ColocarDagaEnBoton(menuButtons[i]);
+                        }
+                        break;
                     }
                 }
             }
         }
-    }
 
-    private IEnumerator TransitionToMenuRoutine()
-    {
-        float timer = 0f;
-
-        while (timer < fadeDuration)
+        // 3. Regresar con Escape
+        if (isInSubPanel && Input.GetKeyDown(KeyCode.Escape))
         {
-            timer += Time.unscaledDeltaTime;
-            float progress = timer / fadeDuration;
-
-            if (startCanvasGroup != null)
-            {
-                startCanvasGroup.alpha = Mathf.Lerp(1f, 0f, progress);
-            }
-
-            if (optionsCanvasGroup != null)
-            {
-                optionsCanvasGroup.alpha = Mathf.Lerp(0f, 1f, progress);
-            }
-
-            yield return null;
-        }
-
-        if (startCanvasGroup != null)
-        {
-            startCanvasGroup.alpha = 0f;
-            pressStartScreen.SetActive(false);
-        }
-
-        if (optionsCanvasGroup != null)
-        {
-            optionsCanvasGroup.alpha = 1f;
-            optionsCanvasGroup.interactable = true;
-            optionsCanvasGroup.blocksRaycasts = true;
-        }
-
-        if (btnJugar != null)
-        {
-            btnJugar.Select();
+            VolverAlMenu();
         }
     }
 
-    public void PlayGame()
+    public void EntrarAMenuPrincipal()
     {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(firstLevelSceneName);
+        isInMenuButtons = true;
+        isInSubPanel = false;
+
+        if (pressStartScreen != null) pressStartScreen.SetActive(false);
+        if (menuOptionsScreen != null) menuOptionsScreen.SetActive(true);
+        if (panelOpciones != null) panelOpciones.SetActive(false);
+
+        currentSelectedIndex = 0;
+        SeleccionarBoton(0);
     }
 
-    public void QuitGame()
+    public void AbrirOpciones()
     {
-        Debug.Log("Cerrando el juego...");
+        isInMenuButtons = false;
+        isInSubPanel = true;
 
-#if UNITY_EDITOR
+        if (menuOptionsScreen != null) menuOptionsScreen.SetActive(false);
+        if (panelOpciones != null) panelOpciones.SetActive(true);
+
+        if (daggerPointer != null)
+        {
+            daggerPointer.gameObject.SetActive(false);
+        }
+    }
+
+    public void VolverAlMenu()
+    {
+        isInMenuButtons = true;
+        isInSubPanel = false;
+
+        if (panelOpciones != null) panelOpciones.SetActive(false);
+        if (menuOptionsScreen != null) menuOptionsScreen.SetActive(true);
+
+        PlayerPrefs.Save();
+        SeleccionarBoton(1); // Deja la daga en 'Opciones' al volver
+    }
+
+    public void Jugar()
+    {
+        SceneManager.LoadScene(gameSceneName);
+    }
+
+    public void SalirDelJuego()
+    {
+        #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
-#else
+        #else
         Application.Quit();
-#endif
+        #endif
+    }
+
+    public void AbrirCreditos()
+    {
+        Debug.Log("Créditos seleccionados");
+    }
+
+    private void CambiarSeleccion(int direccion)
+    {
+        if (menuButtons == null || menuButtons.Length == 0) return;
+
+        currentSelectedIndex += direccion;
+
+        if (currentSelectedIndex >= menuButtons.Length) currentSelectedIndex = 0;
+        else if (currentSelectedIndex < 0) currentSelectedIndex = menuButtons.Length - 1;
+
+        SeleccionarBoton(currentSelectedIndex);
+    }
+
+    private void SeleccionarBoton(int index)
+    {
+        if (menuButtons == null || index < 0 || index >= menuButtons.Length) return;
+
+        Button boton = menuButtons[index];
+        if (boton != null)
+        {
+            boton.Select();
+            ColocarDagaEnBoton(boton);
+        }
+    }
+
+    private void ColocarDagaEnBoton(Button boton)
+    {
+        if (daggerPointer != null && boton != null)
+        {
+            daggerPointer.gameObject.SetActive(true);
+            RectTransform targetRect = boton.GetComponent<RectTransform>();
+            if (targetRect != null)
+            {
+                daggerPointer.position = targetRect.position + (Vector3)pointerOffset;
+            }
+        }
+    }
+
+    private void EjecutarBotonSeleccionado()
+    {
+        if (menuButtons != null && currentSelectedIndex >= 0 && currentSelectedIndex < menuButtons.Length)
+        {
+            if (menuButtons[currentSelectedIndex] != null)
+            {
+                menuButtons[currentSelectedIndex].onClick.Invoke();
+            }
+        }
+    }
+
+    private void CargarPreferenciasAudio()
+    {
+        float volMusica = PlayerPrefs.GetFloat("MusicVolume", 0.8f);
+        float volSFX = PlayerPrefs.GetFloat("SFXVolume", 0.8f);
+
+        if (sliderMusica != null)
+        {
+            sliderMusica.value = volMusica;
+            sliderMusica.onValueChanged.AddListener(SetMusicVolume);
+        }
+
+        if (sliderSFX != null)
+        {
+            sliderSFX.value = volSFX;
+            sliderSFX.onValueChanged.AddListener(SetSFXVolume);
+        }
+
+        AplicarVolumen(volMusica, volSFX);
+    }
+
+    public void SetMusicVolume(float volume)
+    {
+        PlayerPrefs.SetFloat("MusicVolume", volume);
+        if (musicAudioSource != null) musicAudioSource.volume = volume;
+    }
+
+    public void SetSFXVolume(float volume)
+    {
+        PlayerPrefs.SetFloat("SFXVolume", volume);
+        if (sfxAudioSource != null) sfxAudioSource.volume = volume;
+    }
+
+    private void AplicarVolumen(float musica, float sfx)
+    {
+        if (musicAudioSource != null) musicAudioSource.volume = musica;
+        if (sfxAudioSource != null) sfxAudioSource.volume = sfx;
     }
 }
