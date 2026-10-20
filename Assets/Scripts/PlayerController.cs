@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,34 +10,50 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private Vector2 moveInput;
 
-    [Header("Salud")]
+    [Header("Salud y UI")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth;
-    [SerializeField] private Slider healthSlider; // Opcional: arrastra tu barra de vida si tienes una
+    [SerializeField] private Slider healthSlider; // Arrastra tu Slider aquí
 
-    [Header("Disparo / Ataque")]
-    [SerializeField] private GameObject projectilePrefab; // Prefab de la lanza
-    [SerializeField] private Transform firePoint;          // Punto vacío en la mano del personaje
-    [SerializeField] private float fireRate = 0.4f;        // Cadencia entre disparos
-    [SerializeField] private float projectileSpeed = 14f;  // Velocidad de la lanza
+    [Header("Feedback de Daño (Flash)")]
+    [SerializeField] private Color damageColor = Color.red;
+    [SerializeField] private float flashDuration = 0.15f;
+    private Color originalColor;
+    private Coroutine flashCoroutine;
+
+    [Header("Ataque con Lanza")]
+    [SerializeField] private GameObject projectilePrefab;
+    [SerializeField] private Transform firePoint;
+    [SerializeField] private float fireRate = 0.4f;
+    [SerializeField] private float projectileSpeed = 14f;
     private float nextFireTime = 0f;
 
-    [Header("Game Over & Estado")]
+    [Header("Integración Game Over")]
     [SerializeField] private GameOverManager gameOverManager;
     private bool isDead = false;
 
-    [Header("Visuales")]
-    [SerializeField] private SpriteRenderer spriteRenderer;
+    private SpriteRenderer spriteRenderer;
+    private Camera mainCam;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
-        if (spriteRenderer == null) spriteRenderer = GetComponent<SpriteRenderer>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
+        {
+            originalColor = spriteRenderer.color;
+        }
     }
 
     void Start()
     {
         currentHealth = maxHealth;
+
+        mainCam = Camera.main;
+        if (mainCam == null)
+        {
+            mainCam = FindFirstObjectByType<Camera>();
+        }
 
         if (healthSlider != null)
         {
@@ -44,7 +61,6 @@ public class PlayerController : MonoBehaviour
             healthSlider.value = currentHealth;
         }
 
-        // Si no se asignó en el Inspector, busca el Canvas con el GameOverManager solo
         if (gameOverManager == null)
         {
             gameOverManager = FindFirstObjectByType<GameOverManager>();
@@ -55,22 +71,19 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
 
-        // 1. Entrada de movimiento (WASD / Flechas)
         moveInput.x = Input.GetAxisRaw("Horizontal");
         moveInput.y = Input.GetAxisRaw("Vertical");
         moveInput = moveInput.normalized;
 
-        // Voltear sprite según la dirección horizontal
         if (spriteRenderer != null)
         {
             if (moveInput.x > 0.01f) spriteRenderer.flipX = false;
             else if (moveInput.x < -0.01f) spriteRenderer.flipX = true;
         }
 
-        // 2. Disparo con Clic Izquierdo del mouse o barra espaciadora
         if ((Input.GetButton("Fire1") || Input.GetKey(KeyCode.Space)) && Time.time >= nextFireTime)
         {
-            Disparar();
+            DispararLanza();
             nextFireTime = Time.time + fireRate;
         }
     }
@@ -83,29 +96,27 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Movimiento por físicas en 2D
         rb.linearVelocity = moveInput * moveSpeed;
     }
 
-    private void Disparar()
+    private void DispararLanza()
     {
         if (projectilePrefab == null) return;
 
-        // Si no tienes firePoint asignado, dispara desde el centro del jugador
         Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
 
-        // Calcular dirección hacia el puntero del mouse
-        Vector3 mouseWorldPos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        if (mainCam == null) mainCam = Camera.main;
+        if (mainCam == null) return;
+
+        Vector3 mouseWorldPos = mainCam.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
         Vector2 direction = ((Vector2)mouseWorldPos - (Vector2)spawnPos).normalized;
 
         if (direction == Vector2.zero) direction = Vector2.right;
 
-        // Rotar proyectil hacia la dirección del mouse
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
         GameObject projectile = Instantiate(projectilePrefab, spawnPos, Quaternion.Euler(0, 0, angle));
 
-        // Aplicar velocidad al proyectil
         Rigidbody2D projRb = projectile.GetComponent<Rigidbody2D>();
         if (projRb != null)
         {
@@ -124,10 +135,25 @@ public class PlayerController : MonoBehaviour
             healthSlider.value = currentHealth;
         }
 
+        // Indicador visual de daño (parpadeo rojo)
+        if (spriteRenderer != null)
+        {
+            if (flashCoroutine != null) StopCoroutine(flashCoroutine);
+            flashCoroutine = StartCoroutine(DamageFlash());
+        }
+
         if (currentHealth <= 0f)
         {
             Morir();
         }
+    }
+
+    private IEnumerator DamageFlash()
+    {
+        spriteRenderer.color = damageColor;
+        yield return new WaitForSeconds(flashDuration);
+        spriteRenderer.color = originalColor;
+        flashCoroutine = null;
     }
 
     private void Morir()
@@ -138,18 +164,22 @@ public class PlayerController : MonoBehaviour
         currentHealth = 0f;
         rb.linearVelocity = Vector2.zero;
 
-        // Activa la pantalla de muerte y congela la partida
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = originalColor;
+        }
+
+        if (gameOverManager == null)
+        {
+            gameOverManager = FindFirstObjectByType<GameOverManager>();
+        }
+
         if (gameOverManager != null)
         {
             gameOverManager.ActivarGameOver();
         }
-        else
-        {
-            Debug.LogError("PlayerController: No se encontró el GameOverManager en la escena.");
-        }
     }
 
-    // Detección de daño por contacto con enemigos o proyectiles hostiles
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Enemy"))

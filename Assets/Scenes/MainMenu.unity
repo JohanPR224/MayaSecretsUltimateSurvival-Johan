@@ -1165,6 +1165,7 @@ GameObject:
   - component: {fileID: 1108413973}
   - component: {fileID: 1108413975}
   - component: {fileID: 1108413974}
+  - component: {fileID: 1108413976}
   m_Layer: 0
   m_Name: Text_PressStart
   m_TagString: Untagged
@@ -1291,6 +1292,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1108413972}
   m_CullTransparentMesh: 1
+--- !u!114 &1108413976
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1108413972}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 386fbf5162c1347449eea4ad0ce29a85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlinkText
+  blinkSpeed: 0.5
 --- !u!1 &1245104097
 GameObject:
   m_ObjectHideFlags: 0
