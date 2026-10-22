@@ -3,97 +3,139 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+[System.Serializable]
+public class Wave
+{
+    public string waveName = "Oleada 1";
+    public int enemyCount = 5;
+    public float spawnInterval = 2f;
+    public GameObject[] enemyPrefabs;
+}
+
 public class WaveManager : MonoBehaviour
 {
-    [System.Serializable]
-    public class Wave
-    {
-        public string waveName;           // Ej: "Oleada 1: Cacería de Aluxes"
-        public GameObject[] enemyPrefabs; // Prefabs asignados desde Assets
-        public int enemyCount;            // Cantidad de enemigos
-        public float spawnInterval;       // Tiempo entre apariciones
-    }
+    [Header("Fondo Oscuro para Textos")]
+    [SerializeField] private GameObject darkBanner; // Panel semitransparente
 
-    public Wave[] waves;                  // Lista de oleadas en el Inspector
-    public Transform[] spawnPoints;       // Puntos de generación en el cenote
-    public TextMeshProUGUI waveTextUI;    // Texto en pantalla para la oleada
-    public ExperienceSystem expSystem;    // Referencia al sistema de XP
+    [Header("Mensaje de Bienvenida / Objetivo")]
+    [SerializeField] private TextMeshProUGUI introNoticeText;
+    [TextArea(2, 4)]
+    [SerializeField] private string introMessage = "SOBREVIVE A TODAS LAS OLEADAS PARA PASAR AL SIGUIENTE NIVEL, BUENA SUERTE";
+    [SerializeField] private float introDuration = 3.5f;
 
+    [Header("Configuración de Oleadas")]
+    [SerializeField] private List<Wave> waves = new List<Wave>();
+    [SerializeField] private Transform[] spawnPoints;
+    [SerializeField] private float timeBetweenWaves = 3f;
+
+    [Header("UI Anuncio de Oleada")]
+    [SerializeField] private TextMeshProUGUI waveNoticeText;
+    [SerializeField] private float noticeDuration = 2.5f;
+
+    [Header("Progreso")]
     private int currentWaveIndex = 0;
-    private int enemiesRemaining;
+    private int enemiesRemaining = 0;
     private bool isSpawning = false;
+    private ExperienceSystem expSystem;
 
     void Start()
     {
-        StartCoroutine(StartNextWave());
+        expSystem = FindAnyObjectByType<ExperienceSystem>();
+
+        // Asegurar que inicien ocultos
+        if (waveNoticeText != null) waveNoticeText.gameObject.SetActive(false);
+        if (introNoticeText != null) introNoticeText.gameObject.SetActive(false);
+        if (darkBanner != null) darkBanner.SetActive(false);
+
+        StartCoroutine(SecuenciaInicioJuego());
     }
 
-    IEnumerator StartNextWave()
+    private IEnumerator SecuenciaInicioJuego()
     {
-        if (currentWaveIndex >= waves.Length)
+        // 1. Mostrar mensaje de inicio con fondo oscuro
+        if (introNoticeText != null)
         {
-            if (waveTextUI != null)
+            if (darkBanner != null) darkBanner.SetActive(true);
+            introNoticeText.text = introMessage;
+            introNoticeText.gameObject.SetActive(true);
+
+            yield return new WaitForSeconds(introDuration);
+
+            introNoticeText.gameObject.SetActive(false);
+            if (darkBanner != null) darkBanner.SetActive(false);
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        // 2. Comenzar la primera oleada
+        if (waves.Count > 0)
+        {
+            StartCoroutine(StartNextWave());
+        }
+    }
+
+    private IEnumerator StartNextWave()
+    {
+        if (currentWaveIndex < waves.Count)
+        {
+            Wave currentWave = waves[currentWaveIndex];
+            enemiesRemaining = currentWave.enemyCount;
+            isSpawning = true;
+
+            // Mostrar el cartel de la oleada con fondo oscuro
+            if (waveNoticeText != null)
             {
-                waveTextUI.text = "¡VICTORIA EN EL CENOTE!";
+                string textoAMostrar = string.IsNullOrEmpty(currentWave.waveName) 
+                    ? $"Oleada {currentWaveIndex + 1}" 
+                    : currentWave.waveName;
+
+                if (darkBanner != null) darkBanner.SetActive(true);
+                waveNoticeText.text = textoAMostrar;
+                waveNoticeText.gameObject.SetActive(true);
             }
-            yield break;
-        }
 
-        Wave currentWave = waves[currentWaveIndex];
+            yield return new WaitForSeconds(noticeDuration);
 
-        if (waveTextUI != null)
-        {
-            waveTextUI.text = currentWave.waveName;
-        }
-        
-        yield return new WaitForSeconds(2f);
-
-        if (waveTextUI != null)
-        {
-            waveTextUI.text = ""; // Borra el texto de la pantalla
-        }
-
-        if (spawnPoints == null || spawnPoints.Length == 0)
-        {
-            Debug.LogError("⚠️ No has asignado Spawn Points en el GeneradorOleadas.");
-            yield break;
-        }
-
-        if (currentWave.enemyPrefabs == null || currentWave.enemyPrefabs.Length == 0)
-        {
-            Debug.LogError("⚠️ No has asignado ningún Prefab de enemigo en la oleada actual.");
-            yield break;
-        }
-
-        enemiesRemaining = currentWave.enemyCount;
-        isSpawning = true;
-
-        for (int i = 0; i < currentWave.enemyCount; i++)
-        {
-            Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
-            GameObject enemyPrefab = currentWave.enemyPrefabs[Random.Range(0, currentWave.enemyPrefabs.Length)];
-
-            if (enemyPrefab != null && spawnPoint != null)
+            if (waveNoticeText != null)
             {
-                GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, Quaternion.identity);
+                waveNoticeText.gameObject.SetActive(false);
+                if (darkBanner != null) darkBanner.SetActive(false);
+            }
 
-                Enemy enemyScript = enemy.GetComponent<Enemy>();
-                if (enemyScript != null)
+            // Generar los enemigos
+            for (int i = 0; i < currentWave.enemyCount; i++)
+            {
+                if (spawnPoints.Length == 0 || currentWave.enemyPrefabs.Length == 0) break;
+
+                Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
+                GameObject enemyPrefab = currentWave.enemyPrefabs[Random.Range(0, currentWave.enemyPrefabs.Length)];
+
+                if (enemyPrefab != null && spawnPoint != null)
                 {
-                    enemyScript.onEnemyKilled += OnEnemyDefeated;
+                    GameObject enemy = Instantiate(enemyPrefab, spawnPoint.position, Quaternion.identity);
+
+                    Enemy enemyScript = enemy.GetComponent<Enemy>();
+                    if (enemyScript != null)
+                    {
+                        enemyScript.onEnemyKilled += OnEnemyDefeated;
+                    }
                 }
+
+                yield return new WaitForSeconds(currentWave.spawnInterval);
             }
 
-            yield return new WaitForSeconds(currentWave.spawnInterval);
+            isSpawning = false;
         }
-
-        isSpawning = false;
-        ComprobarFinDeOleada();
     }
 
     void OnEnemyDefeated(int expReward)
     {
         enemiesRemaining--;
+
+        if (expSystem == null)
+        {
+            expSystem = FindAnyObjectByType<ExperienceSystem>();
+        }
 
         if (expSystem != null)
         {
@@ -108,11 +150,21 @@ public class WaveManager : MonoBehaviour
         if (enemiesRemaining <= 0 && !isSpawning)
         {
             currentWaveIndex++;
-            if (expSystem != null)
+
+            if (currentWaveIndex < waves.Count)
             {
-                expSystem.TriggerSkillSelection();
+                StartCoroutine(EsperarYSiguienteOleada());
             }
-            StartCoroutine(StartNextWave());
+            else
+            {
+                Debug.Log("¡Todas las oleadas completadas!");
+            }
         }
+    }
+
+    private IEnumerator EsperarYSiguienteOleada()
+    {
+        yield return new WaitForSeconds(timeBetweenWaves);
+        StartCoroutine(StartNextWave());
     }
 }

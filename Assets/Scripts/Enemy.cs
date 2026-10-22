@@ -1,50 +1,63 @@
-using UnityEngine;
 using System;
+using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class Enemy : MonoBehaviour
 {
     [Header("Ajustes del Enemigo")]
-    public float speed = 2f;          
-    public float health = 30f;          // Vida del enemigo
-    public float damage = 15f;          
-    public int expReward = 20;          
+    public float speed = 2.5f;
+    public float health = 30f;
+    public float damage = 5f;
+    public int expReward = 20;
 
-    public Action<int> onEnemyKilled;   
+    [Header("Cadencia de Ataque al Cazador")]
+    [SerializeField] private float attackRate = 1.0f;
+    private float nextAttackTime = 0f;
+
+    public Action<int> onEnemyKilled;
 
     private Transform playerTransform;
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
 
     void Start()
     {
-        GameObject playerObj = GameObject.FindWithTag("Player");
+        BuscarJugador();
+    }
+
+    void FixedUpdate()
+    {
+        if (playerTransform == null)
+        {
+            BuscarJugador();
+            rb.linearVelocity = Vector2.zero;
+            return;
+        }
+
+        // Dirección directa hacia el cazador
+        Vector2 direction = ((Vector2)playerTransform.position - rb.position).normalized;
+
+        // Mueve al enemigo por velocidad física para respetar los choques suaves
+        rb.linearVelocity = direction * speed;
+    }
+
+    private void BuscarJugador()
+    {
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             playerTransform = playerObj.transform;
         }
     }
 
-    void Update()
-    {
-        if (playerTransform != null)
-        {
-            transform.position = Vector2.MoveTowards(
-                transform.position, 
-                playerTransform.position, 
-                speed * Time.deltaTime
-            );
-
-            if (playerTransform.position.x > transform.position.x)
-                transform.localScale = new Vector3(0.2f, 0.2f, 0.2f);
-            else
-                transform.localScale = new Vector3(-0.2f, 0.2f, 0.2f);
-        }
-    }
-
-    // Método para recibir daño desde los proyectiles
     public void TakeDamage(float amount)
     {
         health -= amount;
-
-        if (health <= 0)
+        if (health <= 0f)
         {
             Die();
         }
@@ -56,27 +69,29 @@ public class Enemy : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private void OnCollisionEnter2D(Collision2D collision)
-    {
-        ProcesarContacto(collision.gameObject);
-    }
-
     private void OnCollisionStay2D(Collision2D collision)
     {
-        ProcesarContacto(collision.gameObject);
-    }
-
-    private void ProcesarContacto(GameObject objetoTocado)
-    {
-        if (objetoTocado.CompareTag("Player"))
+        if (collision.gameObject.CompareTag("Player") && Time.time >= nextAttackTime)
         {
-            PlayerController player = objetoTocado.GetComponent<PlayerController>();
+            PlayerController player = collision.gameObject.GetComponent<PlayerController>();
             if (player != null)
             {
                 player.TakeDamage(damage);
+                nextAttackTime = Time.time + attackRate;
             }
-            
-            Destroy(gameObject);
+        }
+    }
+
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        if (other.CompareTag("Player") && Time.time >= nextAttackTime)
+        {
+            PlayerController player = other.GetComponent<PlayerController>();
+            if (player != null)
+            {
+                player.TakeDamage(damage);
+                nextAttackTime = Time.time + attackRate;
+            }
         }
     }
 }

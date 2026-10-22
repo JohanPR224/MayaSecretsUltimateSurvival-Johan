@@ -10,12 +10,12 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private Vector2 moveInput;
 
-    [Header("Salud y UI")]
+    [Header("Salud y Barra de Vida")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth;
-    [SerializeField] private Slider healthSlider; // Arrastra tu Slider aquí
+    [SerializeField] private Slider healthSlider;
 
-    [Header("Feedback de Daño (Flash)")]
+    [Header("Indicador de Daño")]
     [SerializeField] private Color damageColor = Color.red;
     [SerializeField] private float flashDuration = 0.15f;
     private Color originalColor;
@@ -28,7 +28,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float projectileSpeed = 14f;
     private float nextFireTime = 0f;
 
-    [Header("Integración Game Over")]
+    [Header("Game Over")]
     [SerializeField] private GameOverManager gameOverManager;
     private bool isDead = false;
 
@@ -48,22 +48,24 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         currentHealth = maxHealth;
-
         mainCam = Camera.main;
-        if (mainCam == null)
-        {
-            mainCam = FindFirstObjectByType<Camera>();
-        }
 
+        // Configuración inicial de la barra de vida en base a 100
         if (healthSlider != null)
         {
+            healthSlider.minValue = 0f;
             healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
+            
+            if (healthSlider.fillRect != null)
+            {
+                healthSlider.fillRect.gameObject.SetActive(true);
+            }
         }
 
         if (gameOverManager == null)
         {
-            gameOverManager = FindFirstObjectByType<GameOverManager>();
+            gameOverManager = FindAnyObjectByType<GameOverManager>();
         }
     }
 
@@ -71,16 +73,19 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
 
+        // Lectura de controles de movimiento
         moveInput.x = Input.GetAxisRaw("Horizontal");
         moveInput.y = Input.GetAxisRaw("Vertical");
         moveInput = moveInput.normalized;
 
+        // Volteo horizontal del Cazador según dirección
         if (spriteRenderer != null)
         {
             if (moveInput.x > 0.01f) spriteRenderer.flipX = false;
             else if (moveInput.x < -0.01f) spriteRenderer.flipX = true;
         }
 
+        // Ataque de la lanza
         if ((Input.GetButton("Fire1") || Input.GetKey(KeyCode.Space)) && Time.time >= nextFireTime)
         {
             DispararLanza();
@@ -102,16 +107,14 @@ public class PlayerController : MonoBehaviour
     private void DispararLanza()
     {
         if (projectilePrefab == null) return;
-
-        Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
-
         if (mainCam == null) mainCam = Camera.main;
         if (mainCam == null) return;
 
+        Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
         Vector3 mouseWorldPos = mainCam.ScreenToWorldPoint(Input.mousePosition);
         mouseWorldPos.z = 0f;
-        Vector2 direction = ((Vector2)mouseWorldPos - (Vector2)spawnPos).normalized;
 
+        Vector2 direction = ((Vector2)mouseWorldPos - (Vector2)spawnPos).normalized;
         if (direction == Vector2.zero) direction = Vector2.right;
 
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
@@ -129,13 +132,21 @@ public class PlayerController : MonoBehaviour
         if (isDead) return;
 
         currentHealth -= amount;
+        if (currentHealth < 0f) currentHealth = 0f;
 
+        // Actualiza el slider proporcionalmente al daño
         if (healthSlider != null)
         {
             healthSlider.value = currentHealth;
+
+            // Apaga el relleno verde si llega a 0 para que no quede ningún sobrante
+            if (healthSlider.fillRect != null)
+            {
+                healthSlider.fillRect.gameObject.SetActive(currentHealth > 0f);
+            }
         }
 
-        // Indicador visual de daño (parpadeo rojo)
+        // Parpadeo rojo visual al recibir golpe
         if (spriteRenderer != null)
         {
             if (flashCoroutine != null) StopCoroutine(flashCoroutine);
@@ -161,18 +172,8 @@ public class PlayerController : MonoBehaviour
         if (isDead) return;
         isDead = true;
 
-        currentHealth = 0f;
         rb.linearVelocity = Vector2.zero;
-
-        if (spriteRenderer != null)
-        {
-            spriteRenderer.color = originalColor;
-        }
-
-        if (gameOverManager == null)
-        {
-            gameOverManager = FindFirstObjectByType<GameOverManager>();
-        }
+        if (spriteRenderer != null) spriteRenderer.color = originalColor;
 
         if (gameOverManager != null)
         {
@@ -180,19 +181,37 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Colisión física sólida
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            TakeDamage(15f);
+            Enemy enemy = collision.gameObject.GetComponent<Enemy>();
+            if (enemy != null)
+            {
+                TakeDamage(enemy.damage); // Resta el valor exacto del enemigo
+            }
+            else
+            {
+                TakeDamage(5f);
+            }
         }
     }
 
+    // Colisión en caso de usar IsTrigger
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Enemy") || other.CompareTag("EnemyAttack"))
         {
-            TakeDamage(15f);
+            Enemy enemy = other.GetComponent<Enemy>();
+            if (enemy != null)
+            {
+                TakeDamage(enemy.damage); // Resta el valor exacto del enemigo
+            }
+            else
+            {
+                TakeDamage(5f);
+            }
         }
     }
 }

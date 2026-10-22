@@ -1,64 +1,52 @@
 using UnityEngine;
-using TMPro;
+using UnityEngine.UI;
 
 public class ExperienceSystem : MonoBehaviour
 {
+    [Header("Configuración de Niveles")]
+    public int currentLevel = 1;
     public int currentExp = 0;
     public int expToNextLevel = 100;
-    public int currentLevel = 1;
+    public float expGrowthMultiplier = 1.25f;
 
-    public GameObject skillSelectionPanel; // UI Panel con 3 botones de habilidades[cite: 6, 12, 13]
-    public TextMeshProUGUI levelTextUI;
+    [Header("UI")]
+    [SerializeField] private Slider expSlider;
+
+    void Start()
+    {
+        // Reinicia la experiencia actual al arrancar la partida
+        currentExp = 0;
+        ActualizarUI();
+    }
 
     public void AddExperience(int amount)
     {
         currentExp += amount;
-        if (currentExp >= expToNextLevel)
+
+        // Si llena la barra y sube de nivel
+        while (currentExp >= expToNextLevel)
         {
-            currentExp -= expToNextLevel;
-            currentLevel++;
-            expToNextLevel = Mathf.RoundToInt(expToNextLevel * 1.5f);
-            UpdateUI();
+            SubirNivel();
         }
+
+        ActualizarUI();
     }
 
-    public void TriggerSkillSelection()
+    private void SubirNivel()
     {
-        // Pausa el juego y muestra el panel con 3 opciones de mejora[cite: 6, 12, 13, 24]
-        Time.timeScale = 0f; 
-        if (skillSelectionPanel != null)
-            skillSelectionPanel.SetActive(true);
+        currentExp -= expToNextLevel;
+        currentLevel++;
+        expToNextLevel = Mathf.RoundToInt(expToNextLevel * expGrowthMultiplier);
+        Debug.Log("¡Subiste de nivel! Nivel actual: " + currentLevel);
     }
 
-    // Métodos para asignar a los 3 Botones en Unity:
-    public void SelectSkill1_DamageBoost()
+    private void ActualizarUI()
     {
-        Debug.Log("Habilidad Elegida: +Aumento de Daño (Macuahuitl/Arco)");
-        ResumeGame();
-    }
-
-    public void SelectSkill2_HealthRegen()
-    {
-        Debug.Log("Habilidad Elegida: +Regeneración de Vida");
-        ResumeGame();
-    }
-
-    public void SelectSkill3_SpeedBoost()
-    {
-        Debug.Log("Habilidad Elegida: +Velocidad de Movimiento");
-        ResumeGame();
-    }
-
-    private void ResumeGame()
-    {
-        if (skillSelectionPanel != null)
-            skillSelectionPanel.SetActive(false);
-        Time.timeScale = 1f; // Reanuda el juego
-    }
-
-    void UpdateUI()
-    {
-        if (levelTextUI != null)
-            levelTextUI.text = "Nivel " + currentLevel;
+        if (expSlider != null)
+        {
+            expSlider.minValue = 0;
+            expSlider.maxValue = expToNextLevel;
+            expSlider.value = currentExp;
+        }
     }
 }

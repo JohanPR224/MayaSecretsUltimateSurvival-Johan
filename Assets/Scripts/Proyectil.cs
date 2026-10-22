@@ -3,46 +3,52 @@ using UnityEngine;
 public class Proyectil : MonoBehaviour
 {
     [Header("Ajustes del Proyectil")]
-    public float speed = 12f;
-    public float damage = 15f;
-    public float lifetime = 3f;
+    [SerializeField] private float damage = 10f;
+    [SerializeField] private float lifeTime = 3f;
 
-    private Vector2 direccionMovimiento;
-    private bool estaInicializado = false;
-
-    public void Inicializar(Vector2 direccion)
+    void Start()
     {
-        direccionMovimiento = direccion.normalized;
-        estaInicializado = true;
-
-        // Orienta el gráfico hacia la dirección a la que vuela
-        float angle = Mathf.Atan2(direccionMovimiento.y, direccionMovimiento.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0, 0, angle);
-
-        // Se destruye automáticamente después de cierto tiempo para liberar memoria
-        Destroy(gameObject, lifetime);
+        // Se destruye automáticamente tras el tiempo de vida
+        Destroy(gameObject, lifeTime);
     }
 
-    void Update()
-    {
-        if (estaInicializado)
-        {
-            // Mueve el proyectil cuadro a cuadro en dirección al objetivo
-            transform.position += (Vector3)(direccionMovimiento * speed * Time.deltaTime);
-        }
-    }
-
+    // Detección si el proyectil o el obstáculo tiene 'Is Trigger' activado
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Enemy"))
+        ProcesarImpacto(collision.gameObject);
+    }
+
+    // Detección si la colisión es física sólida
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        ProcesarImpacto(collision.gameObject);
+    }
+
+    private void ProcesarImpacto(GameObject target)
+    {
+        // Ignora al propio jugador si sale de su centro
+        if (target.CompareTag("Player"))
         {
-            Enemy enemy = collision.GetComponent<Enemy>();
+            return;
+        }
+
+        // Si choca con un enemigo le hace daño y se destruye
+        if (target.CompareTag("Enemy"))
+        {
+            Enemy enemy = target.GetComponent<Enemy>();
             if (enemy != null)
             {
                 enemy.TakeDamage(damage);
             }
+            Destroy(gameObject);
+            return;
+        }
 
-            Destroy(gameObject); // Se destruye al impactar con un Alux
+        // Si choca con los obstáculos y muros recién etiquetados
+        if (target.CompareTag("Obstaculo") || target.CompareTag("Wall"))
+        {
+            Destroy(gameObject);
+            return;
         }
     }
 }
