@@ -2,32 +2,61 @@ using UnityEngine;
 
 public class EnemyFollow : MonoBehaviour
 {
-    // Velocidad de avance del enemigo (unidades por segundo)
+    [Header("Ajustes de Movimiento")]
     [SerializeField] private float speed = 2.5f;
-    
-    // Referencia a la posición del jugador
-    private Transform player;
+
+    private Transform target;
+    private Rigidbody2D rb;
+
+    void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+    }
 
     void Start()
     {
-        // Al aparecer en la escena, busca el objeto que tenga la etiqueta "Player"
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
+        BuscarJugador();
+    }
+
+    void BuscarJugador()
+    {
+        // 1. Intentar por Tag
+        GameObject p = GameObject.FindGameObjectWithTag("Player");
+        if (p != null)
         {
-            player = playerObj.transform;
+            target = p.transform;
+            return;
+        }
+
+        // 2. Si no tiene Tag, buscar por el script PlayerController
+        PlayerController pc = FindFirstObjectByType<PlayerController>();
+        if (pc != null)
+        {
+            target = pc.transform;
         }
     }
 
-    void Update()
+    void FixedUpdate()
     {
-        // Si el jugador no existe o fue destruido, el enemigo no hace nada
-        if (player == null) return;
+        // Si aún no encuentra al player, intentar reconectar
+        if (target == null)
+        {
+            BuscarJugador();
+            return;
+        }
 
-        // 1. Calcula la dirección restando la posición del objetivo menos la suya propia
-        // 2. .normalized hace que el vector tenga longitud 1 (para moverse a velocidad constante)
-        Vector2 direction = (player.position - transform.position).normalized;
+        if (rb != null)
+        {
+            // Dirección hacia el cazador
+            Vector2 direccion = ((Vector2)target.position - rb.position).normalized;
 
-        // 3. Modifica la posición sumándole la dirección * velocidad * tiempo entre frames
-        transform.position += (Vector3)(direction * speed * Time.deltaTime);
+            // Movimiento mediante física para empujar y deslizarse sobre obstáculos
+            rb.linearVelocity = direccion * speed;
+        }
+        else
+        {
+            // Respaldo por posición si no tuviera Rigidbody2D
+            transform.position = Vector2.MoveTowards(transform.position, target.position, speed * Time.deltaTime);
+        }
     }
 }

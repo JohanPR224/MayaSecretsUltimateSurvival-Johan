@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 8681227}
   - component: {fileID: 8681226}
   - component: {fileID: 8681230}
+  - component: {fileID: 8681231}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -201,7 +202,7 @@ Rigidbody2D:
     m_Bits: 0
   m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 0
+  m_CollisionDetection: 1
   m_Constraints: 4
 --- !u!212 &8681228
 SpriteRenderer:
@@ -292,16 +293,34 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 5
+  lanzaPrefab: {fileID: 7634899099514284870, guid: c29b6a6b1ff93b04da2d1ad499f4cd63, type: 3}
+  firePoint: {fileID: 1061657715}
+  fireRate: 0.4
   maxHealth: 100
   currentHealth: 0
   healthSlider: {fileID: 1469251320}
-  damageColor: {r: 1, g: 0, b: 0, a: 1}
+  hitColor: {r: 1, g: 0, b: 0, a: 1}
   flashDuration: 0.15
-  projectilePrefab: {fileID: 7634899099514284870, guid: c29b6a6b1ff93b04da2d1ad499f4cd63, type: 3}
-  firePoint: {fileID: 1061657715}
-  fireRate: 0.4
-  projectileSpeed: 14
-  gameOverManager: {fileID: 458715249}
+  invulnerabilityDuration: 0.5
+  shakeDuration: 0.12
+  shakeMagnitude: 0.1
+--- !u!114 &8681231
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8681225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba9d513bdd116e144a906fb69dc39f8a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EfectoMovimiento2D
+  frecuenciaRespiracion: 3
+  intensidadRespiracion: 0.04
+  frecuenciaCaminar: 11
+  intensidadPasos: 0.04
+  anguloInclinacion: 1
 --- !u!1 &49821284
 GameObject:
   m_ObjectHideFlags: 0
@@ -368,8 +387,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4285516780
-  m_fontColor: {r: 0.9254902, g: 0.79607844, b: 0.43529412, a: 1}
+    rgba: 4278255360
+  m_fontColor: {r: 0, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 1
   m_colorMode: 3
   m_fontColorGradient:
@@ -614,7 +633,7 @@ Transform:
   m_GameObject: {fileID: 196133366}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -11.78, y: -6.24, z: 0}
+  m_LocalPosition: {x: -10.61, y: -5.98, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1219,12 +1238,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 8681229}
-  smoothTime: 0.2
+  smoothSpeed: 10
   useLimits: 1
-  minX: -4.13
-  maxX: 4.13
-  minY: -2.86
-  maxY: 2.86
+  minLimits: {x: -3.9, y: -2.6}
+  maxLimits: {x: 3.9, y: 2.6}
+  defaultDuration: 0.12
+  defaultMagnitude: 0.18
 --- !u!1 &577993529
 GameObject:
   m_ObjectHideFlags: 0
@@ -1609,8 +1628,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4285516780
-  m_fontColor: {r: 0.9254902, g: 0.79607844, b: 0.43529412, a: 1}
+    rgba: 4278255360
+  m_fontColor: {r: 0, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 1
   m_colorMode: 3
   m_fontColorGradient:
@@ -1922,7 +1941,7 @@ GameObject:
   - component: {fileID: 953196134}
   m_Layer: 0
   m_Name: MapBorders
-  m_TagString: Untagged
+  m_TagString: Obstaculo
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -1978,7 +1997,7 @@ Transform:
   m_GameObject: {fileID: 964456352}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 11.13, y: -6.67, z: 0}
+  m_LocalPosition: {x: 10.22, y: -4.9, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2027,7 +2046,7 @@ GameObject:
   - component: {fileID: 1079762369}
   m_Layer: 0
   m_Name: Wall_down
-  m_TagString: Obstaculo
+  m_TagString: wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2255,7 +2274,7 @@ Transform:
   m_GameObject: {fileID: 1151530359}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -11.17, y: 5.72, z: 0}
+  m_LocalPosition: {x: -10.54, y: 5.4, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2518,7 +2537,7 @@ GameObject:
   - component: {fileID: 1411644332}
   m_Layer: 0
   m_Name: Wall_up
-  m_TagString: Obstaculo
+  m_TagString: wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -2594,6 +2613,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1433261132}
   - component: {fileID: 1433261133}
+  - component: {fileID: 1433261134}
   m_Layer: 0
   m_Name: EnemySpawner
   m_TagString: Untagged
@@ -2632,34 +2652,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da73416b8bb4cc146b0b3cea58bcf2bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaveManager
-  darkBanner: {fileID: 278966275}
-  introNoticeText: {fileID: 676212288}
-  introMessage: "SOBREVIVE A TODAS LAS OLEADAS PARA PASAR AL SIGUIENTE NIVEL\n BUENA SUERTE"
-  introDuration: 3.5
-  waves:
-  - waveName: Oleada 1
-    enemyCount: 25
-    spawnInterval: 1
-    enemyPrefabs:
-    - {fileID: 734733536408534355, guid: d868c617b61905940b5cb9b752271d2d, type: 3}
-  - waveName: Oleada 2
-    enemyCount: 35
-    spawnInterval: 1
-    enemyPrefabs:
-    - {fileID: 734733536408534355, guid: d868c617b61905940b5cb9b752271d2d, type: 3}
-  - waveName: Oleada 3
-    enemyCount: 45
-    spawnInterval: 1
-    enemyPrefabs:
-    - {fileID: 734733536408534355, guid: d868c617b61905940b5cb9b752271d2d, type: 3}
+  currentWave: 1
+  enemiesPerWave: 190000002300000032000000i
+  countdownBetweenWaves: 3.5
+  waveAnnouncementText: {fileID: 49821286}
+--- !u!114 &1433261134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1433261130}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2c29edf507e3e54a86959f96e99d0ca, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemySpawner
+  enemyPrefab: {fileID: 734733536408534355, guid: d868c617b61905940b5cb9b752271d2d, type: 3}
   spawnPoints:
   - {fileID: 1151530360}
   - {fileID: 964456353}
   - {fileID: 196133367}
   - {fileID: 1942600220}
-  timeBetweenWaves: 3
-  waveNoticeText: {fileID: 49821286}
-  noticeDuration: 2.5
+  timeBetweenSpawns: 0.8
+  healthIncreasePerWave: 0.2
+  damageIncreasePerWave: 0.1
 --- !u!1 &1469251318
 GameObject:
   m_ObjectHideFlags: 0
@@ -3477,7 +3494,7 @@ Transform:
   m_GameObject: {fileID: 1942600219}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 11.27, y: 6.2, z: 0}
+  m_LocalPosition: {x: 10.58, y: 5.25, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3495,7 +3512,7 @@ GameObject:
   - component: {fileID: 1964970479}
   m_Layer: 0
   m_Name: Wall_left
-  m_TagString: Obstaculo
+  m_TagString: wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3573,7 +3590,7 @@ GameObject:
   - component: {fileID: 1970298154}
   m_Layer: 0
   m_Name: Wall_right
-  m_TagString: Obstaculo
+  m_TagString: wall
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

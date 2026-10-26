@@ -2,7 +2,6 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-[RequireComponent(typeof(Rigidbody2D))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movimiento")]
@@ -10,35 +9,38 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private Vector2 moveInput;
 
-    [Header("Salud y Barra de Vida")]
+    [Header("Disparo / Lanzas")]
+    [SerializeField] private GameObject lanzaPrefab;
+    [SerializeField] private Transform firePoint;
+    [SerializeField] private float fireRate = 0.4f;
+    private float nextFireTime = 0f;
+
+    [Header("Estadísticas de Salud")]
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth;
     [SerializeField] private Slider healthSlider;
 
-    [Header("Indicador de Daño")]
-    [SerializeField] private Color damageColor = Color.red;
+    [Header("Efectos Visuales de Daño")]
+    [SerializeField] private Color hitColor = Color.red;
     [SerializeField] private float flashDuration = 0.15f;
+    [SerializeField] private float invulnerabilityDuration = 0.5f;
+
+    [Header("Sacudida de Pantalla")]
+    [SerializeField] private float shakeDuration = 0.2f;
+    [SerializeField] private float shakeMagnitude = 0.45f;
+
+    private bool isDead = false;
+    private float invulnerabilityTimer = 0f;
+    private SpriteRenderer spriteRenderer;
     private Color originalColor;
     private Coroutine flashCoroutine;
-
-    [Header("Ataque con Lanza")]
-    [SerializeField] private GameObject projectilePrefab;
-    [SerializeField] private Transform firePoint;
-    [SerializeField] private float fireRate = 0.4f;
-    [SerializeField] private float projectileSpeed = 14f;
-    private float nextFireTime = 0f;
-
-    [Header("Game Over")]
-    [SerializeField] private GameOverManager gameOverManager;
-    private bool isDead = false;
-
-    private SpriteRenderer spriteRenderer;
-    private Camera mainCam;
+    private GameOverManager gameOverManager;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+
         if (spriteRenderer != null)
         {
             originalColor = spriteRenderer.color;
@@ -48,105 +50,119 @@ public class PlayerController : MonoBehaviour
     void Start()
     {
         currentHealth = maxHealth;
-        mainCam = Camera.main;
 
-        // Configuración inicial de la barra de vida en base a 100
         if (healthSlider != null)
         {
-            healthSlider.minValue = 0f;
             healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
-            
-            if (healthSlider.fillRect != null)
-            {
-                healthSlider.fillRect.gameObject.SetActive(true);
-            }
         }
 
-        if (gameOverManager == null)
-        {
-            gameOverManager = FindAnyObjectByType<GameOverManager>();
-        }
+        gameOverManager = FindFirstObjectByType<GameOverManager>();
     }
 
     void Update()
     {
         if (isDead) return;
 
-        // Lectura de controles de movimiento
+        // 1. Captura de teclas de movimiento (WASD / Flechas)
         moveInput.x = Input.GetAxisRaw("Horizontal");
         moveInput.y = Input.GetAxisRaw("Vertical");
         moveInput = moveInput.normalized;
 
-        // Volteo horizontal del Cazador según dirección
-        if (spriteRenderer != null)
+        // 2. Volteo de sprite horizontal según dirección
+        if (moveInput.x > 0.01f && spriteRenderer != null)
         {
-            if (moveInput.x > 0.01f) spriteRenderer.flipX = false;
-            else if (moveInput.x < -0.01f) spriteRenderer.flipX = true;
+            spriteRenderer.flipX = false;
+        }
+        else if (moveInput.x < -0.01f && spriteRenderer != null)
+        {
+            spriteRenderer.flipX = true;
         }
 
-        // Ataque de la lanza
+        // 3. Disparo con Clic Izquierdo o Barra Espaciadora
         if ((Input.GetButton("Fire1") || Input.GetKey(KeyCode.Space)) && Time.time >= nextFireTime)
         {
             DispararLanza();
-            nextFireTime = Time.time + fireRate;
+        }
+
+        // 4. Temporizador de invulnerabilidad
+        if (invulnerabilityTimer > 0f)
+        {
+            invulnerabilityTimer -= Time.deltaTime;
         }
     }
 
     void FixedUpdate()
     {
-        if (isDead)
-        {
-            rb.linearVelocity = Vector2.zero;
-            return;
-        }
+        if (isDead) return;
 
-        rb.linearVelocity = moveInput * moveSpeed;
+        // Aplicación del movimiento sobre el Rigidbody2D
+        if (rb != null)
+        {
+            rb.linearVelocity = moveInput * moveSpeed;
+        }
     }
+
+    private Vector2 lastFacingDirection = Vector2.right;
+
+    // En Update(), actualiza hacia dónde mira el jugador:
+    // (Añade esto justo debajo de donde lees moveInput):
+    // if (moveInput.sqrMagnitude > 0.01f) lastFacingDirection = moveInput;
 
     private void DispararLanza()
     {
-        if (projectilePrefab == null) return;
-        if (mainCam == null) mainCam = Camera.main;
-        if (mainCam == null) return;
+        nextFireTime = Time.time + fireRate;
 
-        Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
-        Vector3 mouseWorldPos = mainCam.ScreenToWorldPoint(Input.mousePosition);
-        mouseWorldPos.z = 0f;
-
-        Vector2 direction = ((Vector2)mouseWorldPos - (Vector2)spawnPos).normalized;
-        if (direction == Vector2.zero) direction = Vector2.right;
-
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-        GameObject projectile = Instantiate(projectilePrefab, spawnPos, Quaternion.Euler(0, 0, angle));
-
-        Rigidbody2D projRb = projectile.GetComponent<Rigidbody2D>();
-        if (projRb != null)
+        if (lanzaPrefab != null)
         {
-            projRb.linearVelocity = direction * projectileSpeed;
+            // Posición de salida de la lanza (FirePoint si existe, si no, el Player)
+            Vector3 spawnPos = firePoint != null ? firePoint.position : transform.position;
+
+            // 1. Obtener la posición del ratón en coordenadas del mundo 2D
+            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            mousePos.z = 0f;
+
+            // 2. Calcular la dirección desde el punto de disparo hacia el ratón
+            Vector2 direccionDisparo = (mousePos - spawnPos).normalized;
+
+            // 3. Instanciar la lanza
+            GameObject lanzaObj = Instantiate(lanzaPrefab, spawnPos, Quaternion.identity);
+
+            // 4. Inicializar con la dirección calculada hacia el cursor
+            Proyectil proyectilScript = lanzaObj.GetComponent<Proyectil>();
+            if (proyectilScript != null)
+            {
+                proyectilScript.Inicializar(direccionDisparo);
+            }
         }
     }
-
     public void TakeDamage(float amount)
     {
-        if (isDead) return;
+        if (isDead || invulnerabilityTimer > 0f) return;
+
+        invulnerabilityTimer = invulnerabilityDuration;
+
+        // Disparar sacudida de pantalla
+        if (CameraFollow.Instance != null)
+        {
+            CameraFollow.Instance.TriggerShake(shakeDuration, shakeMagnitude);
+        }
 
         currentHealth -= amount;
         if (currentHealth < 0f) currentHealth = 0f;
 
-        // Actualiza el slider proporcionalmente al daño
+        // Actualizar barra verde en la UI
         if (healthSlider != null)
         {
             healthSlider.value = currentHealth;
 
-            // Apaga el relleno verde si llega a 0 para que no quede ningún sobrante
             if (healthSlider.fillRect != null)
             {
                 healthSlider.fillRect.gameObject.SetActive(currentHealth > 0f);
             }
         }
 
-        // Parpadeo rojo visual al recibir golpe
+        // Parpadeo rojo visual
         if (spriteRenderer != null)
         {
             if (flashCoroutine != null) StopCoroutine(flashCoroutine);
@@ -155,63 +171,79 @@ public class PlayerController : MonoBehaviour
 
         if (currentHealth <= 0f)
         {
-            Morir();
+            Die();
         }
     }
 
     private IEnumerator DamageFlash()
     {
-        spriteRenderer.color = damageColor;
+        spriteRenderer.color = hitColor;
         yield return new WaitForSeconds(flashDuration);
         spriteRenderer.color = originalColor;
         flashCoroutine = null;
     }
 
-    private void Morir()
+    public void Heal(float amount)
+    {
+        if (isDead) return;
+
+        currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+
+        if (healthSlider != null)
+        {
+            healthSlider.value = currentHealth;
+
+            if (healthSlider.fillRect != null)
+            {
+                healthSlider.fillRect.gameObject.SetActive(true);
+            }
+        }
+    }
+
+    private void Die()
     {
         if (isDead) return;
         isDead = true;
+        currentHealth = 0f;
 
-        rb.linearVelocity = Vector2.zero;
-        if (spriteRenderer != null) spriteRenderer.color = originalColor;
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+        }
 
+        // Desactivar movimiento del script secundario si existe
+        PlayerMovement pm = GetComponent<PlayerMovement>();
+        if (pm != null) pm.enabled = false;
+
+        // Activar pantalla de Game Over
         if (gameOverManager != null)
         {
             gameOverManager.ActivarGameOver();
         }
     }
 
-    // Colisión física sólida
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        DetectarContacto(other.gameObject);
+    }
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Enemy"))
+        DetectarContacto(collision.gameObject);
+    }
+
+    private void DetectarContacto(GameObject obj)
+    {
+        if (isDead) return;
+
+        Enemy enemy = obj.GetComponent<Enemy>();
+        if (enemy != null || obj.CompareTag("Enemy"))
         {
-            Enemy enemy = collision.gameObject.GetComponent<Enemy>();
-            if (enemy != null)
-            {
-                TakeDamage(enemy.damage); // Resta el valor exacto del enemigo
-            }
-            else
-            {
-                TakeDamage(5f);
-            }
+            float danio = enemy != null ? enemy.damage : 10f;
+            TakeDamage(danio);
         }
     }
 
-    // Colisión en caso de usar IsTrigger
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.CompareTag("Enemy") || other.CompareTag("EnemyAttack"))
-        {
-            Enemy enemy = other.GetComponent<Enemy>();
-            if (enemy != null)
-            {
-                TakeDamage(enemy.damage); // Resta el valor exacto del enemigo
-            }
-            else
-            {
-                TakeDamage(5f);
-            }
-        }
-    }
+    public float GetCurrentHealth() => currentHealth;
+    public float GetMaxHealth() => maxHealth;
 }

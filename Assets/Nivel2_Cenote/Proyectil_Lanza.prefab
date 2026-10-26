@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3439819778735864119}
   m_Layer: 0
   m_Name: Proyectil_Lanza
-  m_TagString: Untagged
+  m_TagString: Proyectil
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -170,6 +170,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f1bb56c82b3aa449a8dca2646f42b09, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Proyectil
-  speed: 12
   damage: 15
-  lifetime: 3
+  lifeTime: 3

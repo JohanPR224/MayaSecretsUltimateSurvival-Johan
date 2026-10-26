@@ -1,38 +1,103 @@
+using System.Collections;
 using UnityEngine;
 
 public class CameraFollow : MonoBehaviour
 {
-    [Header("Objetivo")]
-    [SerializeField] private Transform target;
-    [SerializeField] private float smoothTime = 0.2f;
+    public static CameraFollow Instance;
 
-    [Header("Límites del Mapa (Clamp)")]
-    [SerializeField] private bool useLimits = true;
-    [SerializeField] private float minX = -4.13f;
-    [SerializeField] private float maxX = 4.13f;
-    [SerializeField] private float minY = -2.86f;
-    [SerializeField] private float maxY = 2.86f;
+    [Header("Objetivo a seguir")]
+    public Transform target;
+    [Range(1f, 25f)]
+    [SerializeField] private float smoothSpeed = 10f;
 
-    private Vector3 velocity = Vector3.zero;
+    [Header("Límites del Mapa")]
+    public bool useLimits = true;
+    public Vector2 minLimits = new Vector2(-10f, -10f);
+    public Vector2 maxLimits = new Vector2(10f, 10f);
 
-void LateUpdate()
+    [Header("Ajustes de Sacudida")]
+    [SerializeField] private float defaultDuration = 0.2f;
+    [SerializeField] private float defaultMagnitude = 0.4f;
+
+    private float fixedZ = -10f;
+    private Vector3 shakeOffset = Vector3.zero;
+    private Coroutine shakeCoroutine;
+
+    void Awake()
+    {
+        Instance = this;
+        fixedZ = transform.position.z != 0 ? transform.position.z : -10f;
+    }
+
+    void Start()
+    {
+        if (target == null)
+        {
+            GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+            if (playerObj != null)
+            {
+                target = playerObj.transform;
+            }
+        }
+    }
+
+    void Update()
+    {
+        // Tecla T opcional de prueba
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            TriggerShake(0.25f, 0.45f);
+        }
+    }
+
+    void LateUpdate()
     {
         if (target == null) return;
 
-        // 1. Objetivo deseado siguiendo al jugador en X e Y
-        Vector3 targetPosition = new Vector3(target.position.x, target.position.y, transform.position.z);
-        
-        // 2. Movimiento suavizado
-        Vector3 smoothedPosition = Vector3.SmoothDamp(transform.position, targetPosition, ref velocity, smoothTime);
+        // 1. Destino base siguiendo al personaje
+        Vector3 targetPosition = new Vector3(target.position.x, target.position.y, fixedZ);
 
-        // 3. Bloqueo estricto contra los límites del mapa
+        // 2. Interpolar suavemente
+        Vector3 smoothPosition = Vector3.Lerp(transform.position, targetPosition, smoothSpeed * Time.deltaTime);
+
+        // 3. Sumar el offset de sacudida
+        float finalX = smoothPosition.x + shakeOffset.x;
+        float finalY = smoothPosition.y + shakeOffset.y;
+
+        // 4. Clampear al final para que la sacudida jamás muestre el vacío exterior
         if (useLimits)
         {
-            smoothedPosition.x = Mathf.Clamp(smoothedPosition.x, minX, maxX);
-            smoothedPosition.y = Mathf.Clamp(smoothedPosition.y, minY, maxY);
+            finalX = Mathf.Clamp(finalX, minLimits.x, maxLimits.x);
+            finalY = Mathf.Clamp(finalY, minLimits.y, maxLimits.y);
         }
 
-        // 4. Asignar posición final
-        transform.position = smoothedPosition;
+        transform.position = new Vector3(finalX, finalY, fixedZ);
+    }
+
+    public void TriggerShake(float duration = 0.2f, float magnitude = 0.4f)
+    {
+        if (shakeCoroutine != null)
+        {
+            StopCoroutine(shakeCoroutine);
+        }
+        shakeCoroutine = StartCoroutine(ShakeRoutine(duration, magnitude));
+    }
+
+    private IEnumerator ShakeRoutine(float duration, float magnitude)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            float x = Random.Range(-1f, 1f) * magnitude;
+            float y = Random.Range(-1f, 1f) * magnitude;
+
+            shakeOffset = new Vector3(x, y, 0f);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        shakeOffset = Vector3.zero;
     }
 }

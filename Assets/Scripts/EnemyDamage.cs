@@ -14,6 +14,10 @@ public class EnemyDamage : MonoBehaviour
             {
                 playerHealth.TakeDamage(damageAmount);
             }
+            if (CameraFollow.Instance != null)
+            {
+                CameraFollow.Instance.TriggerShake(0.2f, 0.45f);
+            }
 
             // Opcional: el enemigo se destruye al impactar (estilo kamikaze/brote)
             Destroy(gameObject);

@@ -7,6 +7,8 @@ TagManager:
   - Enemy
   - EnemyAttack
   - Obstaculo
+  - Proyectil
+  - wall
   layers:
   - Default
   - TransparentFX

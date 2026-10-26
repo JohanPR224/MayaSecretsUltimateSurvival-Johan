@@ -49,6 +49,11 @@ public class PlayerHealth : MonoBehaviour
         currentHealth -= damage;
         invulnerabilityTimer = invulnerabilityDuration;
 
+        if (CameraFollow.Instance != null)
+        {
+            CameraFollow.Instance.TriggerShake(0.2f, 0.4f);
+        }
+        
         if (healthSlider != null)
         {
             healthSlider.value = currentHealth;
@@ -90,12 +95,26 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-    // Compatibilidad en caso de que tus enemigos llamen al daño por Trigger o Collision
+   // Detecta si el enemigo tiene Is Trigger activado
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (other.CompareTag("Enemy"))
+        ProcesarContacto(other.gameObject);
+    }
+
+    // Detecta si el enemigo choca con física sólida (sin Is Trigger)
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        ProcesarContacto(collision.gameObject);
+    }
+
+    private void ProcesarContacto(GameObject obj)
+    {
+        // Si el objeto tiene el script Enemy o el tag Enemy
+        Enemy enemy = obj.GetComponent<Enemy>();
+        if (enemy != null || obj.CompareTag("Enemy"))
         {
-            TakeDamage(20f); // Daño estándar por defecto si el script del enemigo no llama TakeDamage directamente
+            float dmg = enemy != null ? enemy.damage : 10f;
+            TakeDamage(dmg);
         }
     }
 

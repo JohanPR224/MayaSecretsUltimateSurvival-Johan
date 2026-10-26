@@ -1,97 +1,85 @@
-using System;
+using System.Collections;
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody2D))]
 public class Enemy : MonoBehaviour
 {
-    [Header("Ajustes del Enemigo")]
-    public float speed = 2.5f;
-    public float health = 30f;
-    public float damage = 5f;
-    public int expReward = 20;
+    [Header("Estadísticas Base del Enemigo")]
+    public float maxHealth = 30f;
+    public float currentHealth;
+    public float damage = 10f;
 
-    [Header("Cadencia de Ataque al Cazador")]
-    [SerializeField] private float attackRate = 1.0f;
-    private float nextAttackTime = 0f;
+    [Header("Efectos Visuales")]
+    [SerializeField] private Color hitColor = Color.red;
+    [SerializeField] private float flashDuration = 0.1f;
 
-    public Action<int> onEnemyKilled;
-
-    private Transform playerTransform;
-    private Rigidbody2D rb;
+    private SpriteRenderer spriteRenderer;
+    private Color originalColor;
+    private Coroutine flashCoroutine;
+    private bool isDead = false;
 
     void Awake()
     {
-        rb = GetComponent<Rigidbody2D>();
-    }
-
-    void Start()
-    {
-        BuscarJugador();
-    }
-
-    void FixedUpdate()
-    {
-        if (playerTransform == null)
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null)
         {
-            BuscarJugador();
-            rb.linearVelocity = Vector2.zero;
-            return;
+            originalColor = spriteRenderer.color;
         }
 
-        // Dirección directa hacia el cazador
-        Vector2 direction = ((Vector2)playerTransform.position - rb.position).normalized;
-
-        // Mueve al enemigo por velocidad física para respetar los choques suaves
-        rb.linearVelocity = direction * speed;
+        if (currentHealth <= 0f)
+        {
+            currentHealth = maxHealth;
+        }
     }
 
-    private void BuscarJugador()
+    // Configura la vida y daño escalados desde EnemySpawner
+    public void ConfigurarEstadisticas(int numeroOleada, float factorVida, float factorDanio)
     {
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-        if (playerObj != null)
-        {
-            playerTransform = playerObj.transform;
-        }
+        int nivelExtra = Mathf.Max(0, numeroOleada - 1);
+
+        maxHealth = Mathf.Round(maxHealth * (1f + nivelExtra * factorVida));
+        currentHealth = maxHealth;
+
+        damage = Mathf.Round(damage * (1f + nivelExtra * factorDanio));
     }
 
     public void TakeDamage(float amount)
     {
-        health -= amount;
-        if (health <= 0f)
+        if (isDead) return;
+
+        currentHealth -= amount;
+
+        if (spriteRenderer != null)
+        {
+            if (flashCoroutine != null) StopCoroutine(flashCoroutine);
+            flashCoroutine = StartCoroutine(DamageFlash());
+        }
+
+        if (currentHealth <= 0f)
         {
             Die();
         }
     }
 
-    private void Die()
+    private IEnumerator DamageFlash()
     {
-        onEnemyKilled?.Invoke(expReward);
+        spriteRenderer.color = hitColor;
+        yield return new WaitForSeconds(flashDuration);
+        spriteRenderer.color = originalColor;
+        flashCoroutine = null;
+    }
+
+    public void Die()
+    {
+        if (isDead) return;
+        isDead = true;
+
+        // Descontar enemigo en WaveManager
+        WaveManager waveManager = FindFirstObjectByType<WaveManager>();
+        if (waveManager != null)
+        {
+            waveManager.OnEnemyKilled();
+        }
+
         Destroy(gameObject);
-    }
-
-    private void OnCollisionStay2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("Player") && Time.time >= nextAttackTime)
-        {
-            PlayerController player = collision.gameObject.GetComponent<PlayerController>();
-            if (player != null)
-            {
-                player.TakeDamage(damage);
-                nextAttackTime = Time.time + attackRate;
-            }
-        }
-    }
-
-    private void OnTriggerStay2D(Collider2D other)
-    {
-        if (other.CompareTag("Player") && Time.time >= nextAttackTime)
-        {
-            PlayerController player = other.GetComponent<PlayerController>();
-            if (player != null)
-            {
-                player.TakeDamage(damage);
-                nextAttackTime = Time.time + attackRate;
-            }
-        }
     }
 }
