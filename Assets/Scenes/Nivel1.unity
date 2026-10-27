@@ -734,7 +734,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &278966276
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1571,13 +1571,14 @@ GameObject:
   - component: {fileID: 676212287}
   - component: {fileID: 676212289}
   - component: {fileID: 676212288}
+  - component: {fileID: 676212290}
   m_Layer: 5
   m_Name: IntroNoticeText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &676212287
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1699,6 +1700,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 676212286}
   m_CullTransparentMesh: 1
+--- !u!114 &676212290
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 676212286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 386fbf5162c1347449eea4ad0ce29a85, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlinkText
+  duracionTotal: 4
+  bannerFondo: {fileID: 278966275}
 --- !u!1 &787604210
 GameObject:
   m_ObjectHideFlags: 0
@@ -2655,6 +2670,7 @@ MonoBehaviour:
   currentWave: 1
   enemiesPerWave: 190000002300000032000000i
   countdownBetweenWaves: 3.5
+  blinkInterval: 0.2
   waveAnnouncementText: {fileID: 49821286}
 --- !u!114 &1433261134
 MonoBehaviour:
@@ -2854,6 +2870,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1470504758}
   - component: {fileID: 1470504759}
+  - component: {fileID: 1470504760}
   m_Layer: 0
   m_Name: ExperienceManager
   m_TagString: Untagged
@@ -2893,6 +2910,23 @@ MonoBehaviour:
   expToNextLevel: 100
   expGrowthMultiplier: 1.25
   expSlider: {fileID: 787604212}
+--- !u!114 &1470504760
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1470504757}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 511606c5a1177a8479a0f077bba49c45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExperienceManager
+  expSlider: {fileID: 787604212}
+  nivelActual: 1
+  expActual: 0
+  expParaSubirNivel: 50
+  multiplicadorExpPorNivel: 1.35
 --- !u!1 &1518093016
 GameObject:
   m_ObjectHideFlags: 0

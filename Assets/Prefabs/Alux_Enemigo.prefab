@@ -188,6 +188,7 @@ MonoBehaviour:
   damage: 5
   hitColor: {r: 1, g: 0, b: 0, a: 1}
   flashDuration: 0.1
+  expDropPrefab: {fileID: 7673562380566445457, guid: 65e4841f3f005d8419b227620afcf01d, type: 3}
 --- !u!114 &427330243664027653
 MonoBehaviour:
   m_ObjectHideFlags: 0

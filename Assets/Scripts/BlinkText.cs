@@ -1,45 +1,52 @@
+using System.Collections;
 using UnityEngine;
-using TMPro; // Usamos TextMeshPro, que es el estándar de Unity para UI
+using TMPro;
 
 public class BlinkText : MonoBehaviour
 {
-    [Header("Configuración de Parpadeo")]
-    [SerializeField] private float blinkSpeed = 1f; // Tiempo en segundos de cada parpadeo
+    [Header("Tiempos")]
+    [SerializeField] private float duracionTotal = 3.5f; // Tiempo fijo que se muestra el mensaje
 
-    private TMP_Text textComponent;
-    private float timer;
+    [Header("Fondo Opcional")]
+    [SerializeField] private GameObject bannerFondo;     // Objeto DarkBanner para apagarlo junto al texto
+
+    private TextMeshProUGUI textoTMP;
+
+    void Awake()
+    {
+        textoTMP = GetComponent<TextMeshProUGUI>();
+    }
 
     void Start()
     {
-        // Obtiene el componente de texto del objeto
-        textComponent = GetComponent<TMP_Text>();
-        
-        if (textComponent == null)
-        {
-            Debug.LogError("No se encontró un componente de TextMeshPro (TMP_Text) en este objeto.", gameObject);
-            enabled = false;
-        }
+        StartCoroutine(RutinaMensajeFijo());
     }
 
-    void Update()
+    private IEnumerator RutinaMensajeFijo()
     {
-        // Incrementa el temporizador con el tiempo del juego
-        timer += Time.deltaTime;
+        // 1. Asegurar que el texto esté visible sin parpadeos
+        if (textoTMP != null)
+        {
+            textoTMP.enabled = true;
+        }
 
-        // Comportamiento de parpadeo encendido/apagado natural
-        if (timer >= blinkSpeed)
+        // 2. Esperar el tiempo completo de lectura
+        yield return new WaitForSeconds(duracionTotal);
+
+        // 3. Apagar el fondo oscuro si está asignado
+        if (bannerFondo != null)
         {
-            textComponent.enabled = !textComponent.enabled;
-            timer = 0f;
+            bannerFondo.SetActive(false);
         }
-    }
-    
-    // Al desactivar o cambiar de escena, aseguramos que el texto sea visible por si acaso
-    void OnDisable()
-    {
-        if (textComponent != null)
+
+        // 4. Iniciar la primera oleada en el WaveManager
+        WaveManager waveManager = FindFirstObjectByType<WaveManager>();
+        if (waveManager != null)
         {
-            textComponent.enabled = true;
+            waveManager.ComenzarPrimeraOleada();
         }
+
+        // 5. Apagar el mensaje
+        gameObject.SetActive(false);
     }
 }

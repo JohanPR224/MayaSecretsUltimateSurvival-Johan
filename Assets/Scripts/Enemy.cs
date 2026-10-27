@@ -11,6 +11,8 @@ public class Enemy : MonoBehaviour
     [Header("Efectos Visuales")]
     [SerializeField] private Color hitColor = Color.red;
     [SerializeField] private float flashDuration = 0.1f;
+    [Header("Recompensas")]
+    [SerializeField] private GameObject expDropPrefab;
 
     private SpriteRenderer spriteRenderer;
     private Color originalColor;
@@ -73,7 +75,13 @@ public class Enemy : MonoBehaviour
         if (isDead) return;
         isDead = true;
 
-        // Descontar enemigo en WaveManager
+        // Soltar gema de experiencia en la posición donde murió el Alux
+        if (expDropPrefab != null)
+        {
+            Instantiate(expDropPrefab, transform.position, Quaternion.identity);
+        }
+
+        // Notificar a WaveManager
         WaveManager waveManager = FindFirstObjectByType<WaveManager>();
         if (waveManager != null)
         {

@@ -6,9 +6,12 @@ public class WaveManager : MonoBehaviour
 {
     [Header("Configuración de Oleadas")]
     [SerializeField] private int currentWave = 1;
-    [Tooltip("Cantidad exacta de enemigos por oleada: índice 0 = Oleada 1, índice 1 = Oleada 2, etc.")]
+    [Tooltip("Cantidad exacta de enemigos por oleada: Oleada 1 = 25, Oleada 2 = 35, Oleada 3 = 50")]
     [SerializeField] private int[] enemiesPerWave = new int[] { 25, 35, 50 };
     [SerializeField] private float countdownBetweenWaves = 3.5f;
+
+    [Header("Efecto de Parpadeo de Oleada")]
+    [SerializeField] private float blinkInterval = 0.25f; // Velocidad del parpadeo
 
     [Header("Referencias UI")]
     [SerializeField] private TextMeshProUGUI waveAnnouncementText;
@@ -23,6 +26,17 @@ public class WaveManager : MonoBehaviour
     void Start()
     {
         spawner = FindFirstObjectByType<EnemySpawner>();
+
+        // Si no existe el cartel de bienvenida en la escena, arranca normal
+        BlinkText cartelBienvenida = FindFirstObjectByType<BlinkText>();
+        if (cartelBienvenida == null)
+        {
+            ComenzarPrimeraOleada();
+        }
+    }
+
+    public void ComenzarPrimeraOleada()
+    {
         StartCoroutine(RutinaIniciarOleada());
     }
 
@@ -35,21 +49,31 @@ public class WaveManager : MonoBehaviour
             spawner.DetenerGeneracion();
         }
 
-        // Mostrar texto de anuncio de la oleada
+        // 1. Configurar y encender el texto de la oleada
         if (waveAnnouncementText != null)
         {
             waveAnnouncementText.text = $"OLEADA {currentWave}";
             waveAnnouncementText.gameObject.SetActive(true);
-        }
 
-        yield return new WaitForSeconds(countdownBetweenWaves);
+            // 2. Parpadeo durante el tiempo de espera (countdownBetweenWaves)
+            float tiempoTranscurrido = 0f;
+            while (tiempoTranscurrido < countdownBetweenWaves)
+            {
+                waveAnnouncementText.enabled = !waveAnnouncementText.enabled;
+                yield return new WaitForSeconds(blinkInterval);
+                tiempoTranscurrido += blinkInterval;
+            }
 
-        if (waveAnnouncementText != null)
-        {
+            // 3. Asegurar que quede visible antes de ocultar el GameObject
+            waveAnnouncementText.enabled = true;
             waveAnnouncementText.gameObject.SetActive(false);
         }
+        else
+        {
+            yield return new WaitForSeconds(countdownBetweenWaves);
+        }
 
-        // 1. Obtener la cantidad fija según el índice del arreglo
+        // 4. Calcular cantidad de enemigos para esta oleada
         int index = currentWave - 1;
         if (index < enemiesPerWave.Length)
         {
@@ -57,14 +81,13 @@ public class WaveManager : MonoBehaviour
         }
         else
         {
-            // Respaldo para oleadas posteriores a la 3 (último valor + 15 por oleada)
             totalEnemiesThisWave = enemiesPerWave[enemiesPerWave.Length - 1] + ((currentWave - enemiesPerWave.Length) * 15);
         }
 
         defeatedEnemies = 0;
         waveActive = true;
 
-        // 2. Notificar al Spawner la cantidad exacta que debe instanciar
+        // 5. Iniciar la generación de enemigos
         if (spawner != null)
         {
             spawner.IniciarOleadaDeEnemigos(totalEnemiesThisWave, currentWave);
@@ -77,7 +100,6 @@ public class WaveManager : MonoBehaviour
 
         defeatedEnemies++;
 
-        // Avanzar de oleada cuando se hayan eliminado todos los enemigos asignados
         if (defeatedEnemies >= totalEnemiesThisWave)
         {
             currentWave++;
