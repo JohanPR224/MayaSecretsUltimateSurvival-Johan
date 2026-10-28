@@ -8,7 +8,8 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float currentHealth;
 
     [Header("Referencias de UI")]
-    [SerializeField] private Slider healthSlider; // Opcional: arrastra tu barra de vida si tienes una
+    [SerializeField] private Slider healthSlider; // Opcional
+    [SerializeField] private Image hpFillImage;   // Referencia a HP_Fill en el Canvas
     [SerializeField] private GameOverManager gameOverManager;
 
     [Header("Efectos al recibir daño (Invulnerabilidad)")]
@@ -20,11 +21,8 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = maxHealth;
 
-        if (healthSlider != null)
-        {
-            healthSlider.maxValue = maxHealth;
-            healthSlider.value = currentHealth;
-        }
+        // Inicializar UI al arrancar
+        ActualizarInterfazUI();
 
         // Si no se asignó en el Inspector, intenta buscarlo automáticamente en la escena
         if (gameOverManager == null)
@@ -53,11 +51,8 @@ public class PlayerHealth : MonoBehaviour
         {
             CameraFollow.Instance.TriggerShake(0.2f, 0.4f);
         }
-        
-        if (healthSlider != null)
-        {
-            healthSlider.value = currentHealth;
-        }
+
+        ActualizarInterfazUI();
 
         if (currentHealth <= 0f)
         {
@@ -70,9 +65,21 @@ public class PlayerHealth : MonoBehaviour
         if (isDead) return;
 
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        ActualizarInterfazUI();
+    }
 
+    private void ActualizarInterfazUI()
+    {
+        // 1. Actualizar la barra roja del marco de piedra
+        if (hpFillImage != null)
+        {
+            hpFillImage.fillAmount = currentHealth / maxHealth;
+        }
+
+        // 2. Actualizar Slider si sigue en uso
         if (healthSlider != null)
         {
+            healthSlider.maxValue = maxHealth;
             healthSlider.value = currentHealth;
         }
     }
@@ -83,6 +90,7 @@ public class PlayerHealth : MonoBehaviour
         isDead = true;
 
         currentHealth = 0f;
+        ActualizarInterfazUI();
 
         // Dispara la pantalla de muerte y congela el juego
         if (gameOverManager != null)
@@ -95,7 +103,7 @@ public class PlayerHealth : MonoBehaviour
         }
     }
 
-   // Detecta si el enemigo tiene Is Trigger activado
+    // Detecta si el enemigo tiene Is Trigger activado
     private void OnTriggerEnter2D(Collider2D other)
     {
         ProcesarContacto(other.gameObject);

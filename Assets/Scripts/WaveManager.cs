@@ -11,10 +11,17 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private float countdownBetweenWaves = 3.5f;
 
     [Header("Efecto de Parpadeo de Oleada")]
-    [SerializeField] private float blinkInterval = 0.25f; // Velocidad del parpadeo
+    [SerializeField] private float blinkInterval = 0.25f;
 
-    [Header("Referencias UI")]
+    [Header("Referencias UI - Anuncio de Oleada")]
+    [Tooltip("Arrastra aquí el panel contenedor completo con el marco de piedra (WaveAnnouncementPanel)")]
+    [SerializeField] private GameObject waveAnnouncementPanel;
     [SerializeField] private TextMeshProUGUI waveAnnouncementText;
+
+    [Header("Referencias UI - Contador del HUD")]
+    [Tooltip("Arrastra aquí el panel contenedor del contador (WaveCounterPanel)")]
+    [SerializeField] private GameObject waveCounterPanel;
+    [SerializeField] private TextMeshProUGUI waveCounterHUDText;
 
     private int totalEnemiesThisWave;
     private int defeatedEnemies = 0;
@@ -27,7 +34,17 @@ public class WaveManager : MonoBehaviour
     {
         spawner = FindFirstObjectByType<EnemySpawner>();
 
-        // Si no existe el cartel de bienvenida en la escena, arranca normal
+        // Apagar paneles al iniciar la escena
+        if (waveAnnouncementPanel != null)
+        {
+            waveAnnouncementPanel.SetActive(false);
+        }
+
+        if (waveCounterPanel != null)
+        {
+            waveCounterPanel.SetActive(false);
+        }
+
         BlinkText cartelBienvenida = FindFirstObjectByType<BlinkText>();
         if (cartelBienvenida == null)
         {
@@ -44,36 +61,40 @@ public class WaveManager : MonoBehaviour
     {
         waveActive = false;
 
+        // Apagar el contador del HUD durante el anuncio de la nueva oleada
+        if (waveCounterPanel != null)
+        {
+            waveCounterPanel.SetActive(false);
+        }
+
         if (spawner != null)
         {
             spawner.DetenerGeneracion();
         }
 
-        // 1. Configurar y encender el texto de la oleada
-        if (waveAnnouncementText != null)
+        // Anuncio grande con marco de piedra parpadeando completo
+        if (waveAnnouncementText != null && waveAnnouncementPanel != null)
         {
             waveAnnouncementText.text = $"OLEADA {currentWave}";
-            waveAnnouncementText.gameObject.SetActive(true);
+            waveAnnouncementPanel.SetActive(true);
 
-            // 2. Parpadeo durante el tiempo de espera (countdownBetweenWaves)
             float tiempoTranscurrido = 0f;
             while (tiempoTranscurrido < countdownBetweenWaves)
             {
-                waveAnnouncementText.enabled = !waveAnnouncementText.enabled;
+                // Alternar la visibilidad de todo el panel (fondo + texto)
+                waveAnnouncementPanel.SetActive(!waveAnnouncementPanel.activeSelf);
                 yield return new WaitForSeconds(blinkInterval);
                 tiempoTranscurrido += blinkInterval;
             }
 
-            // 3. Asegurar que quede visible antes de ocultar el GameObject
-            waveAnnouncementText.enabled = true;
-            waveAnnouncementText.gameObject.SetActive(false);
+            waveAnnouncementPanel.SetActive(false);
         }
         else
         {
             yield return new WaitForSeconds(countdownBetweenWaves);
         }
 
-        // 4. Calcular cantidad de enemigos para esta oleada
+        // Calcular total de enemigos
         int index = currentWave - 1;
         if (index < enemiesPerWave.Length)
         {
@@ -87,7 +108,13 @@ public class WaveManager : MonoBehaviour
         defeatedEnemies = 0;
         waveActive = true;
 
-        // 5. Iniciar la generación de enemigos
+        // Mostrar el marco del contador en el HUD
+        if (waveCounterPanel != null)
+        {
+            waveCounterPanel.SetActive(true);
+            ActualizarHUDContador();
+        }
+
         if (spawner != null)
         {
             spawner.IniciarOleadaDeEnemigos(totalEnemiesThisWave, currentWave);
@@ -99,11 +126,21 @@ public class WaveManager : MonoBehaviour
         if (!waveActive) return;
 
         defeatedEnemies++;
+        ActualizarHUDContador();
 
         if (defeatedEnemies >= totalEnemiesThisWave)
         {
             currentWave++;
             StartCoroutine(RutinaIniciarOleada());
+        }
+    }
+
+    private void ActualizarHUDContador()
+    {
+        if (waveCounterHUDText != null)
+        {
+            int restantes = totalEnemiesThisWave - defeatedEnemies;
+            waveCounterHUDText.text = $"OLEADA {currentWave}  |  RESTANTES: {restantes}";
         }
     }
 }

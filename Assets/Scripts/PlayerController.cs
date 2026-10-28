@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float maxHealth = 100f;
     [SerializeField] private float currentHealth;
     [SerializeField] private Slider healthSlider;
+    [SerializeField] private UnityEngine.UI.Image hpFillImage;
 
     [Header("Efectos Visuales de Daño")]
     [SerializeField] private Color hitColor = Color.red;
@@ -137,43 +138,49 @@ public class PlayerController : MonoBehaviour
         }
     }
     public void TakeDamage(float amount)
+{
+    if (isDead || invulnerabilityTimer > 0f) return;
+
+    invulnerabilityTimer = invulnerabilityDuration;
+
+    // Disparar sacudida de pantalla
+    if (CameraFollow.Instance != null)
     {
-        if (isDead || invulnerabilityTimer > 0f) return;
+        CameraFollow.Instance.TriggerShake(shakeDuration, shakeMagnitude);
+    }
 
-        invulnerabilityTimer = invulnerabilityDuration;
+    currentHealth -= amount;
+    if (currentHealth < 0f) currentHealth = 0f;
 
-        // Disparar sacudida de pantalla
-        if (CameraFollow.Instance != null)
+    // 1. Actualizar barra antigua (Slider) si sigue presente
+    if (healthSlider != null)
+    {
+        healthSlider.value = currentHealth;
+
+        if (healthSlider.fillRect != null)
         {
-            CameraFollow.Instance.TriggerShake(shakeDuration, shakeMagnitude);
-        }
-
-        currentHealth -= amount;
-        if (currentHealth < 0f) currentHealth = 0f;
-
-        // Actualizar barra verde en la UI
-        if (healthSlider != null)
-        {
-            healthSlider.value = currentHealth;
-
-            if (healthSlider.fillRect != null)
-            {
-                healthSlider.fillRect.gameObject.SetActive(currentHealth > 0f);
-            }
-        }
-
-        // Parpadeo rojo visual
-        if (spriteRenderer != null)
-        {
-            if (flashCoroutine != null) StopCoroutine(flashCoroutine);
-            flashCoroutine = StartCoroutine(DamageFlash());
-        }
-
-        if (currentHealth <= 0f)
-        {
-            Die();
+            healthSlider.fillRect.gameObject.SetActive(currentHealth > 0f);
         }
     }
+
+    // 2. Actualizar franja roja en el marco de piedra maya
+    if (hpFillImage != null)
+    {
+        hpFillImage.fillAmount = currentHealth / maxHealth;
+    }
+
+    // Parpadeo rojo visual
+    if (spriteRenderer != null)
+    {
+        if (flashCoroutine != null) StopCoroutine(flashCoroutine);
+        flashCoroutine = StartCoroutine(DamageFlash());
+    }
+
+    if (currentHealth <= 0f)
+    {
+        Die();
+    }
+}
 
     private IEnumerator DamageFlash()
     {

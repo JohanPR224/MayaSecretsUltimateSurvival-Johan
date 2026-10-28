@@ -4,6 +4,9 @@ using UnityEngine.UI;
 public class ExperienceManager : MonoBehaviour
 {
     [Header("Referencias UI")]
+    [Tooltip("Imagen verde (EXP_Fill) configurada con Image Type: Filled")]
+    [SerializeField] private Image expFillImage;
+    [Tooltip("Opcional: Si conservas un Slider para la experiencia")]
     [SerializeField] private Slider expSlider;
 
     [Header("Nivel y Experiencia")]
@@ -39,6 +42,13 @@ public class ExperienceManager : MonoBehaviour
 
     private void ActualizarInterfaz()
     {
+        // Actualizar llenado mediante la imagen en la ranura de piedra
+        if (expFillImage != null)
+        {
+            expFillImage.fillAmount = (float)expActual / expParaSubirNivel;
+        }
+
+        // Compatibilidad en caso de seguir usando un Slider convencional
         if (expSlider != null)
         {
             expSlider.maxValue = expParaSubirNivel;

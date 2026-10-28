@@ -4,11 +4,16 @@ using TMPro;
 
 public class BlinkText : MonoBehaviour
 {
+    [Header("Modo de Uso")]
+    [Tooltip("Marca esto si es para el 'PRESS START' del Menú. Desmárcalo si es el aviso de inicio del Nivel.")]
+    [SerializeField] private bool esParaMenu = true;
+
     [Header("Tiempos")]
-    [SerializeField] private float duracionTotal = 3.5f; // Tiempo fijo que se muestra el mensaje
+    [SerializeField] private float velocidadParpadeo = 0.4f;
+    [SerializeField] private float duracionTotal = 3.5f; // Solo aplica si NO es para menú
 
     [Header("Fondo Opcional")]
-    [SerializeField] private GameObject bannerFondo;     // Objeto DarkBanner para apagarlo junto al texto
+    [SerializeField] private GameObject bannerFondo;
 
     private TextMeshProUGUI textoTMP;
 
@@ -17,36 +22,58 @@ public class BlinkText : MonoBehaviour
         textoTMP = GetComponent<TextMeshProUGUI>();
     }
 
-    void Start()
+    void OnEnable()
     {
-        StartCoroutine(RutinaMensajeFijo());
+        if (esParaMenu)
+        {
+            StartCoroutine(RutinaParpadeoInfinitoMenu());
+        }
+        else
+        {
+            StartCoroutine(RutinaMensajeFijoNivel());
+        }
     }
 
-    private IEnumerator RutinaMensajeFijo()
+    void OnDisable()
     {
-        // 1. Asegurar que el texto esté visible sin parpadeos
+        StopAllCoroutines();
+    }
+
+    // 1. Parpadeo constante e infinito para el Menú Principal ("PRESS START")
+    private IEnumerator RutinaParpadeoInfinitoMenu()
+    {
+        while (true)
+        {
+            if (textoTMP != null)
+            {
+                textoTMP.enabled = !textoTMP.enabled;
+            }
+
+            yield return new WaitForSeconds(velocidadParpadeo);
+        }
+    }
+
+    // 2. Mensaje estático temporal para la bienvenida del Nivel
+    private IEnumerator RutinaMensajeFijoNivel()
+    {
         if (textoTMP != null)
         {
             textoTMP.enabled = true;
         }
 
-        // 2. Esperar el tiempo completo de lectura
         yield return new WaitForSeconds(duracionTotal);
 
-        // 3. Apagar el fondo oscuro si está asignado
         if (bannerFondo != null)
         {
             bannerFondo.SetActive(false);
         }
 
-        // 4. Iniciar la primera oleada en el WaveManager
         WaveManager waveManager = FindFirstObjectByType<WaveManager>();
         if (waveManager != null)
         {
             waveManager.ComenzarPrimeraOleada();
         }
 
-        // 5. Apagar el mensaje
         gameObject.SetActive(false);
     }
 }
