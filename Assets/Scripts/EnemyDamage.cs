@@ -4,23 +4,19 @@ public class EnemyDamage : MonoBehaviour
 {
     [SerializeField] private int damageAmount = 20;
 
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        // Verifica si colisionó con el jugador
-        if (collision.CompareTag("Player"))
-        {
-            PlayerHealth playerHealth = collision.GetComponent<PlayerHealth>();
-            if (playerHealth != null)
-            {
-                playerHealth.TakeDamage(damageAmount);
-            }
-            if (CameraFollow.Instance != null)
-            {
-                CameraFollow.Instance.TriggerShake(0.2f, 0.45f);
-            }
+    private void OnTriggerStay2D(Collider2D other)
+{
+    // Ignora por completo cualquier trigger (Aura de XP, detectores, etc.)
+    if (other.isTrigger) return;
 
-            // Opcional: el enemigo se destruye al impactar (estilo kamikaze/brote)
-            Destroy(gameObject);
+    // Aplica daño únicamente al collider físico de Balam
+    if (other.CompareTag("Player") || other.GetComponent<PlayerController>() != null)
+    {
+        PlayerHealth health = other.GetComponent<PlayerHealth>();
+        if (health != null)
+        {
+            health.TakeDamage(damageAmount);
         }
     }
+}
 }

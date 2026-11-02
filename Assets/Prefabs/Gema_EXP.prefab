@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 5670008024969000324}
   m_Layer: 0
   m_Name: Gema_EXP
-  m_TagString: Untagged
+  m_TagString: GemaEXP
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

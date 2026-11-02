@@ -44,6 +44,19 @@ public class Enemy : MonoBehaviour
         damage = Mathf.Round(damage * (1f + nivelExtra * factorDanio));
     }
 
+    // --- DETECCIÓN DE DAÑO A BALAM ---
+    private void OnTriggerStay2D(Collider2D other)
+{
+    if (other.CompareTag("Player") || other.GetComponent<PlayerController>() != null)
+    {
+        PlayerHealth playerHealth = other.GetComponent<PlayerHealth>();
+        if (playerHealth != null)
+        {
+            playerHealth.TakeDamage(damage);
+        }
+    }
+}
+
     public void TakeDamage(float amount)
     {
         if (isDead) return;

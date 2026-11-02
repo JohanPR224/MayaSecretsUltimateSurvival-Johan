@@ -34,11 +34,24 @@ public class ExperienceManager : MonoBehaviour
     }
 
     private void SubirDeNivel()
+{
+    nivelActual++;
+    expActual -= expParaSubirNivel; // O resetea expActual = 0 según tu lógica
+    expParaSubirNivel = Mathf.RoundToInt(expParaSubirNivel * multiplicadorExpPorNivel);
+
+    Debug.Log($"¡Nivel Subido! Nivel actual: {nivelActual}");
+
+    // Disparar la pantalla de selección y congelar el juego
+    LevelUpManager levelUpUI = FindFirstObjectByType<LevelUpManager>();
+    if (levelUpUI != null)
     {
-        nivelActual++;
-        expParaSubirNivel = Mathf.RoundToInt(expParaSubirNivel * multiplicadorExpPorNivel);
-        Debug.Log($"¡Nivel Subido! Nivel actual: {nivelActual}");
+        levelUpUI.MostrarPantallaSeleccion();
     }
+    else
+    {
+        Debug.LogWarning("No se encontró el 'LevelUpManager' en la escena.");
+    }
+}
 
     private void ActualizarInterfaz()
     {
