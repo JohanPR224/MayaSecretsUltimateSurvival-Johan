@@ -26,6 +26,7 @@ public class LevelUpManager : MonoBehaviour
     [Header("Contenedor HUD de Habilidades Adquiridas")]
     [SerializeField] private Transform skillsContainer; 
     [SerializeField] private GameObject skillIconPrefab; 
+    [SerializeField] private LanzaDeCeibaHabilidad habilidadLanzaCeiba;
 
     [Header("Referencias a Sistemas")]
     [SerializeField] private HabilidadTransformacion2D habilidadTransformacion;
@@ -131,6 +132,14 @@ public class LevelUpManager : MonoBehaviour
             }
                 Debug.Log("Habilidad Desbloqueada: Armas Orbitales");
                 break;
+            
+            case "Transformacion":
+             if (habilidadLanzaCeiba != null)
+            {
+               habilidadLanzaCeiba.Desbloquear();
+            }
+             Debug.Log("Habilidad Desbloqueada: La Lanza de la Ceiba");
+             break;
         }
 
         // 3. REMOVER la habilidad elegida de la lista para que NUNCA vuelva a salir

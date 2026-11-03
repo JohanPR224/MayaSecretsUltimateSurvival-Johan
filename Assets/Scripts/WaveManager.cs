@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement; // Necesario para cambiar de escena
 using TMPro;
 
 public class WaveManager : MonoBehaviour
@@ -23,6 +24,12 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private GameObject waveCounterPanel;
     [SerializeField] private TextMeshProUGUI waveCounterHUDText;
 
+    [Header("Referencias UI - Nivel Completado")]
+    [Tooltip("Arrastra aquí el panel UI de Nivel Completado")]
+    [SerializeField] private GameObject nivelCompletadoPanel;
+    [SerializeField] private string nombreSiguienteEscena = "PrototipoNivel2";
+    [SerializeField] private string nombreMenuPrincipal = "PantallaInicio"; 
+
     private int totalEnemiesThisWave;
     private int defeatedEnemies = 0;
     private bool waveActive = false;
@@ -35,15 +42,9 @@ public class WaveManager : MonoBehaviour
         spawner = FindFirstObjectByType<EnemySpawner>();
 
         // Apagar paneles al iniciar la escena
-        if (waveAnnouncementPanel != null)
-        {
-            waveAnnouncementPanel.SetActive(false);
-        }
-
-        if (waveCounterPanel != null)
-        {
-            waveCounterPanel.SetActive(false);
-        }
+        if (waveAnnouncementPanel != null) waveAnnouncementPanel.SetActive(false);
+        if (waveCounterPanel != null) waveCounterPanel.SetActive(false);
+        if (nivelCompletadoPanel != null) nivelCompletadoPanel.SetActive(false);
 
         BlinkText cartelBienvenida = FindFirstObjectByType<BlinkText>();
         if (cartelBienvenida == null)
@@ -61,18 +62,10 @@ public class WaveManager : MonoBehaviour
     {
         waveActive = false;
 
-        // Apagar el contador del HUD durante el anuncio de la nueva oleada
-        if (waveCounterPanel != null)
-        {
-            waveCounterPanel.SetActive(false);
-        }
+        if (waveCounterPanel != null) waveCounterPanel.SetActive(false);
+        if (spawner != null) spawner.DetenerGeneracion();
 
-        if (spawner != null)
-        {
-            spawner.DetenerGeneracion();
-        }
-
-        // Anuncio grande con marco de piedra parpadeando completo
+        // Anuncio grande con marco de piedra
         if (waveAnnouncementText != null && waveAnnouncementPanel != null)
         {
             waveAnnouncementText.text = $"OLEADA {currentWave}";
@@ -81,7 +74,6 @@ public class WaveManager : MonoBehaviour
             float tiempoTranscurrido = 0f;
             while (tiempoTranscurrido < countdownBetweenWaves)
             {
-                // Alternar la visibilidad de todo el panel (fondo + texto)
                 waveAnnouncementPanel.SetActive(!waveAnnouncementPanel.activeSelf);
                 yield return new WaitForSeconds(blinkInterval);
                 tiempoTranscurrido += blinkInterval;
@@ -94,21 +86,15 @@ public class WaveManager : MonoBehaviour
             yield return new WaitForSeconds(countdownBetweenWaves);
         }
 
-        // Calcular total de enemigos
         int index = currentWave - 1;
         if (index < enemiesPerWave.Length)
         {
             totalEnemiesThisWave = enemiesPerWave[index];
         }
-        else
-        {
-            totalEnemiesThisWave = enemiesPerWave[enemiesPerWave.Length - 1] + ((currentWave - enemiesPerWave.Length) * 15);
-        }
 
         defeatedEnemies = 0;
         waveActive = true;
 
-        // Mostrar el marco del contador en el HUD
         if (waveCounterPanel != null)
         {
             waveCounterPanel.SetActive(true);
@@ -130,9 +116,47 @@ public class WaveManager : MonoBehaviour
 
         if (defeatedEnemies >= totalEnemiesThisWave)
         {
-            currentWave++;
-            StartCoroutine(RutinaIniciarOleada());
+            waveActive = false;
+
+            if (currentWave >= enemiesPerWave.Length)
+            {
+                MostrarVentanaVictoria();
+            }
+            else
+            {
+                currentWave++;
+                StartCoroutine(RutinaIniciarOleada());
+            }
         }
+    }
+
+    private void MostrarVentanaVictoria()
+    {
+        Debug.Log("¡Nivel 1 Completado!");
+
+        if (spawner != null) spawner.DetenerGeneracion();
+        if (waveCounterPanel != null) waveCounterPanel.SetActive(false);
+
+        // Mostrar la UI de victoria y pausar el juego
+        if (nivelCompletadoPanel != null)
+        {
+            nivelCompletadoPanel.SetActive(true);
+        }
+        
+        Time.timeScale = 0f; // Pausa el juego para que no sigan ocurriendo cosas en el fondo
+    }
+
+    // Funciones públicas que se asignan a los Botones de la UI
+    public void BotonSiguienteNivel()
+    {
+        Time.timeScale = 1f; // Reanudar el tiempo antes de cargar
+        SceneManager.LoadScene(nombreSiguienteEscena);
+    }
+
+    public void BotonRegresarMenu()
+    {
+        Time.timeScale = 1f; // Reanudar el tiempo antes de cargar
+        SceneManager.LoadScene(nombreMenuPrincipal);
     }
 
     private void ActualizarHUDContador()
