@@ -61,14 +61,28 @@ public class PlayerController : MonoBehaviour
         gameOverManager = FindFirstObjectByType<GameOverManager>();
     }
 
-    void Update()
+   void Update()
     {
         if (isDead) return;
 
-        // 1. Captura de teclas de movimiento (WASD / Flechas)
-        moveInput.x = Input.GetAxisRaw("Horizontal");
-        moveInput.y = Input.GetAxisRaw("Vertical");
-        moveInput = moveInput.normalized;
+        // 1. Captura de teclas de movimiento personalizadas o respaldo WASD
+        float x = 0f;
+        float y = 0f;
+
+        if (ControlManager.Instance != null)
+        {
+            if (Input.GetKey(ControlManager.Instance.Arriba)) y = 1f;
+            if (Input.GetKey(ControlManager.Instance.Abajo)) y = -1f;
+            if (Input.GetKey(ControlManager.Instance.Izquierda)) x = -1f;
+            if (Input.GetKey(ControlManager.Instance.Derecha)) x = 1f;
+        }
+        else
+        {
+            x = Input.GetAxisRaw("Horizontal");
+            y = Input.GetAxisRaw("Vertical");
+        }
+
+        moveInput = new Vector2(x, y).normalized;
 
         // 2. Volteo de sprite horizontal según dirección
         if (moveInput.x > 0.01f && spriteRenderer != null)
@@ -92,7 +106,6 @@ public class PlayerController : MonoBehaviour
             invulnerabilityTimer -= Time.deltaTime;
         }
     }
-
     void FixedUpdate()
     {
         if (isDead) return;

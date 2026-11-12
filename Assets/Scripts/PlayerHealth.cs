@@ -8,8 +8,8 @@ public class PlayerHealth : MonoBehaviour
     [SerializeField] private float currentHealth;
 
     [Header("Referencias de UI")]
-    [SerializeField] private Slider healthSlider; // Opcional
-    [SerializeField] private Image hpFillImage;   // Referencia a HP_Fill en el Canvas
+    [SerializeField] private Slider healthSlider; 
+    [SerializeField] private Image hpFillImage;   
     [SerializeField] private GameOverManager gameOverManager;
 
     [Header("Efectos al recibir daño (Invulnerabilidad)")]
@@ -21,10 +21,18 @@ public class PlayerHealth : MonoBehaviour
     {
         currentHealth = maxHealth;
 
-        // Inicializar UI al arrancar
+        // BÚSQUEDA AUTOMÁTICA: Si la barra verde no se asignó en el Inspector, la encuentra por su nombre
+        if (hpFillImage == null)
+        {
+            GameObject barraUI = GameObject.Find("HP_Fill");
+            if (barraUI != null)
+            {
+                hpFillImage = barraUI.GetComponent<Image>();
+            }
+        }
+
         ActualizarInterfazUI();
 
-        // Si no se asignó en el Inspector, intenta buscarlo automáticamente en la escena
         if (gameOverManager == null)
         {
             gameOverManager = FindFirstObjectByType<GameOverManager>();
@@ -41,7 +49,6 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        // Evita daño si ya murió o si está en tiempo de invulnerabilidad
         if (isDead || invulnerabilityTimer > 0f) return;
 
         currentHealth -= damage;
@@ -64,19 +71,31 @@ public class PlayerHealth : MonoBehaviour
     {
         if (isDead) return;
 
+        // Suma la vida sin pasarse del máximo
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
+        
+        // Fuerza la actualización de la UI en este exacto instante
         ActualizarInterfazUI();
+
+        // Notifica al PlayerController por si él también intenta controlar la barra
+        SendMessage("UpdateUI", SendMessageOptions.DontRequireReceiver);
     }
 
-    private void ActualizarInterfazUI()
+    public void ActualizarInterfazUI()
     {
-        // 1. Actualizar la barra roja del marco de piedra
+        // Seguro de vida: si la imagen se desvinculó en plena ejecución, la vuelve a buscar
+        if (hpFillImage == null)
+        {
+            GameObject barraUI = GameObject.Find("HP_Fill");
+            if (barraUI != null) hpFillImage = barraUI.GetComponent<Image>();
+        }
+
+        // Actualiza el relleno verde directamente
         if (hpFillImage != null)
         {
             hpFillImage.fillAmount = currentHealth / maxHealth;
         }
 
-        // 2. Actualizar Slider si sigue en uso
         if (healthSlider != null)
         {
             healthSlider.maxValue = maxHealth;
@@ -92,24 +111,17 @@ public class PlayerHealth : MonoBehaviour
         currentHealth = 0f;
         ActualizarInterfazUI();
 
-        // Dispara la pantalla de muerte y congela el juego
         if (gameOverManager != null)
         {
             gameOverManager.ActivarGameOver();
         }
-        else
-        {
-            Debug.LogError("PlayerHealth: No se encontró el GameOverManager en la escena.");
-        }
     }
 
-    // Detecta si el enemigo tiene Is Trigger activado
     private void OnTriggerEnter2D(Collider2D other)
     {
         ProcesarContacto(other.gameObject);
     }
 
-    // Detecta si el enemigo choca con física sólida (sin Is Trigger)
     private void OnCollisionEnter2D(Collision2D collision)
     {
         ProcesarContacto(collision.gameObject);
@@ -117,7 +129,6 @@ public class PlayerHealth : MonoBehaviour
 
     private void ProcesarContacto(GameObject obj)
     {
-        // Si el objeto tiene el script Enemy o el tag Enemy
         Enemy enemy = obj.GetComponent<Enemy>();
         if (enemy != null || obj.CompareTag("Enemy"))
         {

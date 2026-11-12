@@ -13,10 +13,25 @@ public class PlayerMovement : MonoBehaviour
 
     void Update()
     {
-        // Lee teclas W, A, S, D o flechas
-        moveInput.x = Input.GetAxisRaw("Horizontal");
-        moveInput.y = Input.GetAxisRaw("Vertical");
-        moveInput = moveInput.normalized;
+        float x = 0f;
+        float y = 0f;
+
+        // 1. Si venimos del MainMenu, lee las teclas personalizadas de ControlManager
+        if (ControlManager.Instance != null)
+        {
+            if (Input.GetKey(ControlManager.Instance.Arriba)) y = 1f;
+            if (Input.GetKey(ControlManager.Instance.Abajo)) y = -1f;
+            if (Input.GetKey(ControlManager.Instance.Izquierda)) x = -1f;
+            if (Input.GetKey(ControlManager.Instance.Derecha)) x = 1f;
+        }
+        // 2. Respaldo por si pruebas la escena del nivel directamente sin pasar por MainMenu
+        else
+        {
+            x = Input.GetAxisRaw("Horizontal");
+            y = Input.GetAxisRaw("Vertical");
+        }
+
+        moveInput = new Vector2(x, y).normalized;
     }
 
     void FixedUpdate()
@@ -24,4 +39,4 @@ public class PlayerMovement : MonoBehaviour
         // Mueve el cuerpo con físicas constantes (compatible con Unity 6)
         rb.linearVelocity = moveInput * moveSpeed;
     }
-}
+}   
